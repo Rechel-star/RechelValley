@@ -1,0 +1,3283 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>星曌谷物语</title>
+  <style>
+    :root {
+      --ink: #2b1725;
+      --paper: #fff0bd;
+      --paper-dark: #e7bf77;
+      --wood: #7a3f25;
+      --wood-dark: #3e2030;
+      --gold: #ffd35d;
+      --leaf: #315f46;
+      --scene-scale: 1;
+      --ease: cubic-bezier(.22, 1, .36, 1);
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      margin: 0;
+      color: var(--paper);
+      background:
+        linear-gradient(rgba(18, 24, 24, .54), rgba(28, 14, 27, .82)),
+        repeating-linear-gradient(90deg, #294b38 0 28px, #31543e 28px 56px);
+      font-family: "Courier New", "Microsoft YaHei", monospace;
+    }
+
+    button { font: inherit; }
+
+    .title-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      width: 100%;
+      padding: 0;
+      overflow: hidden;
+      border: 0;
+      cursor: pointer;
+      color: inherit;
+      background: #261432 url("source/title-bg.png") center / cover no-repeat;
+      transition: opacity 420ms var(--ease), visibility 420ms;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .title-screen::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(transparent 68%, rgba(19, 8, 25, .55));
+    }
+
+    .title-sign {
+      position: absolute;
+      inset: 0;
+      background: url("source/title-sign.png") center / contain no-repeat;
+      image-rendering: pixelated;
+      will-change: transform;
+    }
+
+    .title-sign-main {
+      clip-path: inset(0 0 34% 0);
+      transform: translateY(-110%);
+    }
+
+    .title-sign-start {
+      clip-path: inset(68% 0 0 0);
+      transform: translateY(110%);
+    }
+
+    .title-screen.is-assembling .title-sign-main {
+      animation: sign-drop 3s cubic-bezier(.18, .76, .2, 1) both;
+    }
+
+    .title-screen.is-assembling .title-sign-start {
+      animation: sign-rise 3s cubic-bezier(.18, .76, .2, 1) both;
+    }
+
+    .title-screen.is-assembling .enter-mark {
+      animation: enter-ready 3.15s steps(1, end) both, enter-nudge 1s steps(2, end) 3.15s infinite;
+    }
+
+    .enter-mark {
+      position: absolute;
+      z-index: 2;
+      bottom: max(7%, env(safe-area-inset-bottom));
+      left: 50%;
+      width: 18px;
+      height: 18px;
+      border-right: 4px solid var(--paper);
+      border-bottom: 4px solid var(--paper);
+      filter: drop-shadow(3px 3px 0 var(--wood-dark));
+      transform: translateX(-50%) rotate(45deg);
+      animation: enter-nudge 1s steps(2, end) infinite;
+    }
+
+    .title-screen.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .game {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      opacity: 0;
+      transform: scale(.985);
+      transition: opacity 500ms ease 180ms, transform 650ms var(--ease) 180ms;
+    }
+
+    .game.is-ready {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .scene-shell {
+      position: relative;
+      overflow: hidden;
+      background: #cfbd92;
+      filter: drop-shadow(0 18px 30px rgba(15, 8, 18, .48));
+    }
+
+    .scene {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 960px;
+      height: 640px;
+      overflow: hidden;
+      transform: scale(var(--scene-scale));
+      transform-origin: 0 0;
+      background: #cfbd92 url("scene-data/living-room.png") center / 960px 640px no-repeat;
+      image-rendering: pixelated;
+      cursor: default;
+    }
+
+    .scene:focus { outline: none; }
+
+    .scene.has-data { background-image: none; }
+
+    .scene.is-switching {
+      animation: scene-change 360ms steps(6, end);
+    }
+
+    .scene-object {
+      position: absolute;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      transform-origin: center;
+      pointer-events: none;
+    }
+
+    .scene-object.interactive {
+      cursor: default;
+      pointer-events: auto;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .scene-object.interactive.is-near {
+      cursor: pointer;
+    }
+
+    .object-img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      image-rendering: pixelated;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .scene-object.is-interacting .object-img {
+      animation: object-nudge 420ms steps(4, end);
+    }
+
+    .scene-object.sunflower.is-interacting .object-img,
+    .scene-object.redFlowers.is-interacting .object-img,
+    .scene-object.carrot.is-interacting .object-img {
+      animation-name: flower-sway;
+      transform-origin: 50% 100%;
+    }
+
+    .scene-object.computer.is-interacting .object-img {
+      animation-name: computer-pulse;
+    }
+
+    .piano-lid,
+    .key-glow,
+    .music-note {
+      position: absolute;
+      z-index: 3;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .piano-lid {
+      left: 12%;
+      top: 9%;
+      width: 76%;
+      height: 28%;
+      border: 3px solid #3c1d16;
+      background: #70411f;
+      box-shadow: inset 0 3px 0 #a76a31;
+      transform: translateY(7px) scaleY(.12);
+      transform-origin: 50% 100%;
+    }
+
+    .key-glow {
+      left: 13%;
+      top: 55%;
+      width: 74%;
+      height: 14%;
+      background: rgba(255, 246, 190, .72);
+      box-shadow: 0 0 8px var(--gold);
+      mix-blend-mode: screen;
+    }
+
+    .music-note {
+      top: 18%;
+      color: var(--gold);
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 700;
+      text-shadow: 2px 2px 0 var(--wood-dark);
+    }
+
+    .music-note.one { left: 29%; }
+    .music-note.two { left: 64%; font-size: 17px; }
+
+    .piano.is-playing .object-img {
+      animation: piano-bounce 520ms steps(6, end);
+    }
+
+    .piano.is-playing .piano-lid {
+      animation: lid-open 520ms steps(6, end);
+    }
+
+    .piano.is-playing .key-glow {
+      animation: keys-flash 420ms steps(4, end);
+    }
+
+    .piano.is-playing .music-note {
+      animation: note-rise 700ms steps(7, end);
+    }
+
+    .piano.is-playing .music-note.two { animation-delay: 90ms; }
+
+    .bookcase.is-reading .object-img {
+      animation: bookcase-bump 360ms steps(4, end);
+    }
+
+    .dog .object-img {
+      animation: dog-idle 1.4s steps(4, end) infinite;
+      transform-origin: 50% 100%;
+    }
+
+    .dog.is-loved .object-img {
+      animation: dog-happy 680ms steps(6, end);
+    }
+
+    .cat .object-img {
+      animation: cat-idle 1.8s steps(4, end) infinite;
+      transform-origin: 50% 100%;
+    }
+
+    .cat.is-loved .object-img {
+      animation: cat-happy 720ms steps(6, end);
+    }
+
+    .scene-heart {
+      visibility: hidden;
+    }
+
+    .scene-heart.is-visible {
+      visibility: visible;
+    }
+
+    .scene-heart.is-visible .object-img {
+      animation: heart-pop 900ms steps(8, end) both;
+    }
+
+    .scene-heart.cat-heart.is-visible .object-img {
+      animation-duration: 1.5s;
+    }
+
+    .player-character {
+      position: absolute;
+      z-index: 900;
+      width: 28px;
+      height: 44px;
+      padding: 0;
+      cursor: pointer;
+      border: 0;
+      background: transparent;
+      pointer-events: auto;
+      will-change: left, top;
+      filter: drop-shadow(2px 3px 0 rgba(45, 27, 31, .4));
+    }
+
+    .player-shadow {
+      position: absolute;
+      left: 50%;
+      bottom: -1px;
+      width: 22px;
+      height: 5px;
+      background: rgba(42, 24, 30, .38);
+      transform: translateX(-50%);
+    }
+
+    .player-avatar {
+      position: absolute;
+      inset: 0;
+      transform-origin: 50% 100%;
+    }
+
+    .player-hair-back,
+    .player-face,
+    .player-hair-front,
+    .player-body,
+    .player-skirt,
+    .player-arm,
+    .player-foot {
+      position: absolute;
+      display: block;
+    }
+
+    .player-hair-back {
+      z-index: 1;
+      left: 3px;
+      top: 5px;
+      width: 22px;
+      height: 22px;
+      border: 2px solid #422436;
+      background: #df78a7;
+      box-shadow:
+        inset 2px 0 0 #f6a9c7,
+        inset -2px 0 0 #b94c7d,
+        -2px 8px 0 #422436,
+        2px 8px 0 #422436,
+        -2px 10px 0 #c75c8c,
+        2px 10px 0 #b94c7d;
+    }
+
+    .player-face {
+      z-index: 2;
+      left: 7px;
+      top: 11px;
+      width: 14px;
+      height: 12px;
+      background: #efad8b;
+      border: 2px solid #422436;
+      box-shadow: inset 0 -2px 0 #d98974;
+    }
+
+    .player-face::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 3px;
+      width: 4px;
+      height: 4px;
+      background: #fff8ef;
+      box-shadow: 6px 0 0 #fff8ef;
+    }
+
+    .player-face::after {
+      content: "";
+      position: absolute;
+      z-index: 1;
+      left: 1px;
+      top: 4px;
+      width: 2px;
+      height: 2px;
+      background: #322037;
+      box-shadow: 6px 0 0 #322037;
+    }
+
+    .player-hair-front {
+      z-index: 3;
+      left: 5px;
+      top: 3px;
+      width: 18px;
+      height: 8px;
+      border: 2px solid #422436;
+      background: #ed8ab4;
+      box-shadow:
+        -2px 2px 0 #422436,
+        2px 2px 0 #422436,
+        inset 4px 2px 0 #ffc1d7,
+        inset -3px 0 0 #bf527f;
+    }
+
+    .player-hair-front::before {
+      content: "";
+      position: absolute;
+      left: 1px;
+      top: 6px;
+      width: 6px;
+      height: 5px;
+      background: #f09abc;
+      box-shadow:
+        -2px 0 0 #422436,
+        10px 0 0 #bd4d7d,
+        12px 0 0 #422436;
+    }
+
+    .player-hair-front::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 1px;
+      width: 5px;
+      height: 2px;
+      background: #ffd2e1;
+    }
+
+    .player-body {
+      z-index: 2;
+      left: 7px;
+      top: 24px;
+      width: 14px;
+      height: 9px;
+      border: 2px solid #342334;
+      background: #201b27;
+      box-shadow: inset 2px 0 0 #44374d, inset -2px 0 0 #100e15;
+    }
+
+    .player-body::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 0;
+      width: 3px;
+      height: 2px;
+      background: #efad8b;
+    }
+
+    .player-body::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -2px;
+      height: 2px;
+      background: #bd5f87;
+    }
+
+    .player-skirt {
+      z-index: 2;
+      left: 5px;
+      top: 31px;
+      width: 18px;
+      height: 10px;
+      border: 2px solid #342334;
+      background: #18151e;
+      box-shadow:
+        -2px 5px 0 #342334,
+        2px 5px 0 #342334,
+        -2px 7px 0 #18151e,
+        2px 7px 0 #18151e,
+        inset 3px 0 0 #3d3245,
+        inset -2px 0 0 #0d0c11;
+    }
+
+    .player-arm {
+      z-index: 1;
+      top: 25px;
+      width: 4px;
+      height: 11px;
+      border: 1px solid #422436;
+      background: linear-gradient(#24202b 0 45%, #e5a082 45% 100%);
+      transform-origin: 50% 0;
+    }
+
+    .player-arm.left { left: 2px; }
+    .player-arm.right { right: 2px; }
+
+    .player-foot {
+      z-index: 1;
+      bottom: 0;
+      width: 6px;
+      height: 3px;
+      background: #35283a;
+      box-shadow: 0 1px 0 #17131b;
+    }
+
+    .player-foot.left { left: 5px; }
+    .player-foot.right { right: 5px; }
+
+    .player-character[data-direction="left"] .player-avatar {
+      transform: scaleX(-1);
+    }
+
+    .player-character[data-direction="up"] .player-face::before {
+      display: none;
+    }
+
+    .player-character[data-direction="up"] .player-face::after {
+      display: none;
+    }
+
+    .player-character[data-direction="up"] .player-hair-front {
+      left: 5px;
+      width: 18px;
+      height: 16px;
+      background: #d96f9f;
+      box-shadow:
+        -2px 2px 0 #422436,
+        2px 2px 0 #422436,
+        inset 3px 2px 0 #f3a3c1,
+        inset -3px 0 0 #ad4774;
+    }
+
+    .player-character[data-direction="up"] .player-hair-front::before {
+      display: none;
+    }
+
+    .player-character.is-walking .player-avatar {
+      animation: player-bob 320ms steps(2, end) infinite;
+    }
+
+    .player-character.is-walking .player-arm.left,
+    .player-character.is-walking .player-foot.right {
+      animation: limb-forward 320ms steps(2, end) infinite;
+    }
+
+    .player-character.is-walking .player-arm.right,
+    .player-character.is-walking .player-foot.left {
+      animation: limb-back 320ms steps(2, end) infinite;
+    }
+
+    .player-character {
+      width: 30px;
+      height: 46px;
+    }
+
+    .player-sprite {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      visibility: hidden;
+      object-fit: contain;
+      object-position: center bottom;
+      image-rendering: pixelated;
+      user-select: none;
+      -webkit-user-drag: none;
+      transform-origin: 50% 100%;
+    }
+
+    .player-character[data-direction="down"] .player-front,
+    .player-character[data-direction="up"] .player-back,
+    .player-character[data-direction="right"] .player-side,
+    .player-character[data-direction="left"] .player-side {
+      visibility: visible;
+    }
+
+    .player-character[data-direction="left"] .player-avatar {
+      transform: none;
+    }
+
+    .player-character[data-direction="left"] .player-side {
+      transform: scaleX(-1);
+    }
+
+    .player-character.is-walking .player-avatar {
+      animation: player-bob 300ms steps(2, end) infinite;
+    }
+
+    .player-character.is-walking[data-direction="left"] .player-side {
+      animation: sprite-step-left 300ms steps(2, end) infinite;
+    }
+
+    .player-character.is-walking[data-direction="right"] .player-side {
+      animation: sprite-step-right 300ms steps(2, end) infinite;
+    }
+
+    .player-character.is-walking[data-direction="up"] .player-back,
+    .player-character.is-walking[data-direction="down"] .player-front {
+      animation: sprite-step-front 300ms steps(2, end) infinite;
+    }
+
+    .player-step {
+      position: absolute;
+      z-index: 2;
+      left: 50%;
+      bottom: 0;
+      width: 4px;
+      height: 2px;
+      opacity: 0;
+      background: rgba(255, 242, 206, .4);
+      transform: translateX(-50%);
+    }
+
+    .player-character.is-walking .player-step {
+      animation: step-dust 600ms steps(3, end) infinite;
+    }
+
+    @keyframes sprite-step-left {
+      0%, 100% { transform: scaleX(-1) translateX(-1px) rotate(-1deg); }
+      50% { transform: scaleX(-1) translateX(1px) rotate(1deg); }
+    }
+
+    @keyframes sprite-step-right {
+      0%, 100% { transform: translateX(-1px) rotate(-1deg); }
+      50% { transform: translateX(1px) rotate(1deg); }
+    }
+
+    @keyframes sprite-step-front {
+      0%, 100% { transform: translateX(-1px); }
+      50% { transform: translateX(1px); }
+    }
+
+    @keyframes step-dust {
+      0% { width: 4px; opacity: 0; }
+      35% { opacity: .65; }
+      100% { width: 16px; opacity: 0; }
+    }
+
+    .character-dialogue {
+      position: fixed;
+      z-index: 75;
+      left: 50%;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 190px;
+      width: min(760px, calc(100% - 24px));
+      min-height: 210px;
+      overflow: hidden;
+      color: #4b271c;
+      background: #e69a3d;
+      border: 7px solid #76330f;
+      box-shadow:
+        0 0 0 3px #d47a21,
+        0 0 0 6px #3e2016,
+        inset 0 0 0 3px #ffca67,
+        8px 10px 0 rgba(32, 17, 25, .5);
+      opacity: 0;
+      visibility: hidden;
+      transform: translate(-50%, 24px);
+      transition: opacity 160ms steps(3, end), transform 220ms var(--ease), visibility 160ms;
+    }
+
+    .character-dialogue.is-open {
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, 0);
+    }
+
+    .dialogue-copy {
+      position: relative;
+      min-width: 0;
+      padding: 24px 52px 28px 24px;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 31px, rgba(160, 85, 31, .08) 31px 32px),
+        linear-gradient(#ffd78a, #f7b75f);
+      border-right: 7px solid #76330f;
+      box-shadow: inset 0 0 0 3px rgba(255, 236, 171, .65);
+    }
+
+    .dialogue-copy p {
+      margin: 0;
+      color: #4e291e;
+      font-family: "Microsoft YaHei", "Courier New", monospace;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.8;
+      letter-spacing: 0;
+      white-space: pre-line;
+      text-shadow: 1px 1px 0 rgba(255, 231, 170, .75);
+    }
+
+    .dialogue-portrait {
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding: 12px 16px 42px;
+      background:
+        repeating-linear-gradient(90deg, rgba(92, 42, 18, .12) 0 3px, transparent 3px 22px),
+        #bd6a2d;
+      box-shadow: inset 0 0 0 3px #efaa53;
+    }
+
+    .dialogue-portrait img {
+      width: 128px;
+      height: 128px;
+      object-fit: contain;
+      image-rendering: pixelated;
+      background: #c8a77d;
+      border: 5px solid #6f2f12;
+      box-shadow: 0 0 0 3px #f1b252;
+    }
+
+    .dialogue-name {
+      position: absolute;
+      right: 14px;
+      bottom: 10px;
+      left: 14px;
+      display: grid;
+      place-items: center;
+      height: 30px;
+      color: #4b2518;
+      background: #f9cd76;
+      border: 3px solid #7c3817;
+      font-size: 17px;
+      font-weight: 900;
+    }
+
+    .dialogue-close {
+      position: absolute;
+      right: 13px;
+      bottom: 13px;
+      width: 25px;
+      height: 25px;
+      padding: 0;
+      cursor: pointer;
+      color: #4d2115;
+      background: #c6782e;
+      border: 3px solid #6e3014;
+      box-shadow: inset 0 0 0 2px #eaa14d;
+    }
+
+    .dialogue-close::before,
+    .dialogue-close::after {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 9px;
+      width: 10px;
+      height: 3px;
+      background: currentColor;
+    }
+
+    .dialogue-close::before { transform: rotate(45deg); }
+    .dialogue-close::after { transform: rotate(-45deg); }
+    .dialogue-close:focus-visible { outline: 3px solid #fff1b0; outline-offset: 2px; }
+
+    .computer-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      opacity: 0;
+      visibility: hidden;
+      background: rgba(24, 13, 25, .72);
+      transition: opacity 160ms ease, visibility 160ms;
+    }
+
+    .computer-backdrop.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .computer-window {
+      width: min(680px, 100%);
+      color: #512819;
+      transform: translateY(18px) scale(.97);
+      transition: transform 180ms steps(3, end);
+    }
+
+    .computer-backdrop.is-open .computer-window {
+      transform: translateY(0) scale(1);
+    }
+
+    .computer-titlebar {
+      width: fit-content;
+      min-width: 250px;
+      margin: 0 0 14px 18px;
+      padding: 12px 24px;
+      color: #63311e;
+      background: linear-gradient(#ffd28a, #efa354);
+      border: 7px solid #783511;
+      box-shadow:
+        0 0 0 3px #d7761e,
+        5px 6px 0 rgba(38, 19, 26, .5),
+        inset 0 0 0 3px #ffe0a2;
+      font-size: 23px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .computer-panel {
+      position: relative;
+      min-height: 390px;
+      max-height: min(74vh, 680px);
+      overflow-y: auto;
+      padding: 30px 34px 28px;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 31px, rgba(155, 75, 24, .07) 31px 32px),
+        linear-gradient(#ffd78d, #f4ad51);
+      border: 8px solid #76320f;
+      box-shadow:
+        0 0 0 3px #d8781f,
+        8px 10px 0 rgba(38, 19, 26, .55),
+        inset 0 0 0 4px #ffe09b;
+    }
+
+    .computer-intro,
+    .computer-file-copy {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.7;
+      white-space: pre-line;
+    }
+
+    .computer-preview-button {
+      min-height: 38px;
+      margin-top: 22px;
+      padding: 6px 18px;
+      cursor: pointer;
+      color: #fce0a2;
+      background: #9d481e;
+      border: 3px solid #5d2814;
+      box-shadow: inset 0 0 0 2px #d98738;
+      font-weight: 900;
+    }
+
+    .computer-preview-button:hover,
+    .computer-preview-button:focus-visible {
+      background: #b95a24;
+      outline: 3px solid #fff1b0;
+      outline-offset: 2px;
+    }
+
+    .resume-preview-image {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 4px solid #7c3613;
+      box-shadow: inset 0 0 0 2px #e49443;
+    }
+
+    .desktop-files {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 24px;
+    }
+
+    .desktop-file {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      min-width: 0;
+      padding: 12px 8px;
+      cursor: pointer;
+      color: #542719;
+      background: transparent;
+      border: 0;
+      font-weight: 900;
+    }
+
+    .desktop-file:hover,
+    .desktop-file:focus-visible {
+      background: rgba(255, 236, 173, .42);
+      outline: 3px solid #8a411c;
+      outline-offset: -3px;
+    }
+
+    .file-icon {
+      display: grid;
+      place-items: center;
+      width: 64px;
+      height: 54px;
+      font-size: 34px;
+      line-height: 1;
+      image-rendering: pixelated;
+      filter: drop-shadow(3px 3px 0 rgba(99, 43, 18, .42));
+    }
+
+    .file-name {
+      overflow-wrap: anywhere;
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    .computer-detail[hidden],
+    .computer-home[hidden],
+    .computer-file-overview[hidden],
+    .computer-project-detail[hidden],
+    .computer-resume-preview[hidden],
+    .computer-preview-button[hidden],
+    .ai-project-list[hidden],
+    .game-library[hidden] {
+      display: none;
+    }
+
+    .computer-detail h2 {
+      margin: 0 44px 20px 0;
+      font-size: 23px;
+      letter-spacing: 0;
+    }
+
+    .ai-project-list {
+      margin-top: 22px;
+      border-top: 3px solid rgba(111, 48, 17, .55);
+    }
+
+    .project-row {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      min-height: 56px;
+      padding: 8px 10px;
+      cursor: pointer;
+      color: #512819;
+      text-align: left;
+      background: rgba(255, 225, 157, .18);
+      border: 0;
+      border-bottom: 3px solid rgba(111, 48, 17, .38);
+    }
+
+    .project-row:hover,
+    .project-row:focus-visible {
+      background: rgba(255, 239, 190, .58);
+      outline: 3px solid #8a411c;
+      outline-offset: -3px;
+    }
+
+    .project-index {
+      color: #a34b20;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .project-name {
+      min-width: 0;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .project-meta,
+    .computer-project-meta {
+      color: #8b4a2c;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .computer-project-meta {
+      display: block;
+      margin: -10px 0 20px;
+    }
+
+    .game-card-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .game-card {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      min-height: 68px;
+      padding: 10px;
+      cursor: pointer;
+      color: #512819;
+      text-align: left;
+      background: rgba(255, 231, 171, .34);
+      border: 3px solid #a75a27;
+      box-shadow: inset 0 0 0 2px rgba(255, 244, 205, .48);
+    }
+
+    .game-card:first-child {
+      grid-column: 1 / -1;
+      background: rgba(255, 239, 190, .58);
+    }
+
+    .game-card:hover,
+    .game-card:focus-visible {
+      background: rgba(255, 247, 213, .78);
+      outline: 3px solid #713016;
+      outline-offset: 2px;
+    }
+
+    .game-mark {
+      font-size: 27px;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .game-card strong,
+    .game-card small {
+      display: block;
+    }
+
+    .game-card strong {
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .game-card small {
+      margin-top: 5px;
+      color: #97502b;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .game-library-closing {
+      margin: 18px 0 0;
+      padding-top: 14px;
+      color: #713b24;
+      border-top: 3px solid rgba(111, 48, 17, .45);
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+
+    .computer-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .computer-back,
+    .computer-close {
+      cursor: pointer;
+      color: #fce0a2;
+      background: #9d481e;
+      border: 3px solid #5d2814;
+      box-shadow: inset 0 0 0 2px #d98738;
+      font-weight: 900;
+    }
+
+    .computer-back {
+      min-height: 38px;
+      padding: 5px 14px;
+    }
+
+    .computer-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .computer-back:focus-visible,
+    .computer-close:focus-visible {
+      outline: 3px solid #fff1b0;
+      outline-offset: 2px;
+    }
+
+    .scroll-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      opacity: 0;
+      visibility: hidden;
+      background: rgba(24, 13, 25, .68);
+      transition: opacity 160ms ease, visibility 160ms;
+    }
+
+    .scroll-backdrop.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .scroll-sheet {
+      position: relative;
+      width: min(560px, calc(100% - 30px));
+      min-height: 330px;
+      padding: 56px 58px 62px;
+      color: #54301e;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 27px, rgba(128, 73, 34, .08) 27px 28px),
+        linear-gradient(90deg, #d89543, #ffd990 8%, #f8c874 50%, #ffd990 92%, #d89543);
+      border: 5px solid #73320f;
+      box-shadow:
+        0 0 0 3px #c66c1c,
+        9px 11px 0 rgba(38, 19, 26, .52),
+        inset 0 0 18px rgba(104, 48, 18, .22);
+    }
+
+    .scroll-sheet::before,
+    .scroll-sheet::after {
+      content: "";
+      position: absolute;
+      z-index: 2;
+      left: -18px;
+      right: -18px;
+      height: 24px;
+      background: linear-gradient(#ef9b34 0 22%, #9a4214 22% 40%, #c9691c 40% 72%, #6f2c0c 72%);
+      border: 4px solid #54230d;
+      box-shadow: inset 0 0 0 2px #f5ae49;
+    }
+
+    .scroll-sheet::before { top: -15px; }
+    .scroll-sheet::after { bottom: -15px; }
+
+    .scroll-sheet.is-turning .scroll-copy {
+      animation: scroll-page-turn 260ms steps(4, end);
+    }
+
+    .scroll-page-number {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      color: #9b552c;
+      font-size: 13px;
+      font-weight: 900;
+      transform: translateX(-50%);
+    }
+
+    .scroll-copy {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.9;
+      white-space: pre-line;
+    }
+
+    .scroll-controls {
+      position: absolute;
+      right: 32px;
+      bottom: 25px;
+      left: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .scroll-nav,
+    .scroll-close {
+      display: grid;
+      place-items: center;
+      padding: 0;
+      cursor: pointer;
+      color: #ffe0a0;
+      background: #98431b;
+      border: 3px solid #57240e;
+      box-shadow: inset 0 0 0 2px #d98231;
+      font-size: 19px;
+      font-weight: 900;
+    }
+
+    .scroll-nav {
+      width: 38px;
+      height: 32px;
+    }
+
+    .scroll-nav:disabled {
+      cursor: default;
+      opacity: .35;
+    }
+
+    .scroll-close {
+      position: absolute;
+      z-index: 3;
+      top: 19px;
+      right: 20px;
+      width: 30px;
+      height: 30px;
+    }
+
+    @keyframes scroll-page-turn {
+      0% { opacity: 1; transform: translateX(0) scaleX(1); }
+      45% { opacity: 0; transform: translateX(-10px) scaleX(.92); }
+      55% { opacity: 0; transform: translateX(10px) scaleX(.92); }
+      100% { opacity: 1; transform: translateX(0) scaleX(1); }
+    }
+
+    .achievement-toast {
+      position: fixed;
+      z-index: 120;
+      top: max(18px, env(safe-area-inset-top));
+      left: 50%;
+      display: flex;
+      align-items: stretch;
+      min-height: 58px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translate(-50%, calc(-100% - 30px));
+      pointer-events: none;
+    }
+
+    .achievement-toast.is-visible {
+      visibility: visible;
+      animation: achievement-toast 3.5s steps(7, end) both;
+    }
+
+    .achievement-star {
+      display: grid;
+      place-items: center;
+      width: 62px;
+      flex: 0 0 62px;
+      color: #fff189;
+      background: #ffc45f;
+      border: 5px solid #793511;
+      box-shadow: inset 0 0 0 3px #f59a32, 4px 5px 0 rgba(40, 20, 26, .45);
+      font-size: 39px;
+      line-height: 1;
+      text-shadow:
+        -2px 0 #c86b1d,
+        2px 0 #c86b1d,
+        0 -2px #c86b1d,
+        0 2px #c86b1d;
+    }
+
+    .achievement-text {
+      display: flex;
+      align-items: center;
+      max-width: min(430px, calc(100vw - 100px));
+      padding: 10px 18px;
+      color: #552719;
+      background: linear-gradient(#ffd58b, #f4ae54);
+      border: 5px solid #793511;
+      border-left: 0;
+      box-shadow: inset 0 0 0 3px #ffe6aa, 4px 5px 0 rgba(40, 20, 26, .45);
+      font-size: 17px;
+      font-weight: 900;
+      line-height: 1.3;
+    }
+
+    .butterfly.is-caught .object-img {
+      animation: butterfly-caught 620ms steps(6, end) forwards;
+    }
+
+    .butterfly.is-collected {
+      pointer-events: none;
+    }
+
+    @keyframes achievement-toast {
+      0% { opacity: 0; transform: translate(-50%, calc(-100% - 30px)); }
+      12%, 82% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, calc(-100% - 30px)); }
+    }
+
+    @keyframes butterfly-caught {
+      0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+      35% { opacity: 1; transform: translate(7px, -10px) rotate(12deg); }
+      70% { opacity: .8; transform: translate(-5px, -22px) rotate(-10deg); }
+      100% { opacity: 0; transform: translate(3px, -34px) rotate(8deg); }
+    }
+
+    .achievement-board-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 95;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      opacity: 0;
+      visibility: hidden;
+      background: rgba(24, 13, 25, .7);
+      transition: opacity 160ms ease, visibility 160ms;
+    }
+
+    .achievement-board-backdrop.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .achievement-board {
+      position: relative;
+      width: min(640px, 100%);
+      max-height: min(84vh, 760px);
+      overflow: hidden;
+      color: #713b21;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 31px, rgba(153, 78, 27, .06) 31px 32px),
+        linear-gradient(#ffd58b, #f4b45d);
+      border: 7px solid #74300e;
+      box-shadow:
+        0 0 0 3px #d77820,
+        8px 10px 0 rgba(35, 18, 24, .52),
+        inset 0 0 0 4px #ffe4a8;
+    }
+
+    .achievement-board-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 20px 70px 16px 24px;
+      border-bottom: 4px solid rgba(122, 54, 18, .5);
+    }
+
+    .achievement-board-header h1 {
+      margin: 0;
+      font-size: 27px;
+      letter-spacing: 0;
+    }
+
+    .achievement-progress {
+      color: #a85b2d;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .achievement-board-close {
+      position: absolute;
+      z-index: 2;
+      top: 15px;
+      right: 15px;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      cursor: pointer;
+      color: #ffe0a2;
+      background: #9d481e;
+      border: 3px solid #5d2814;
+      box-shadow: inset 0 0 0 2px #d98738;
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .achievement-list {
+      max-height: calc(min(84vh, 760px) - 78px);
+      overflow-y: auto;
+      padding: 7px 22px 20px;
+    }
+
+    .achievement-entry {
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr);
+      align-items: center;
+      min-height: 84px;
+      padding: 10px 4px;
+      border-bottom: 3px solid rgba(125, 60, 21, .2);
+    }
+
+    .catalog-star {
+      width: 62px;
+      height: 62px;
+      background-image: url("source/achievement-stars.png");
+      background-repeat: no-repeat;
+      background-size: 300% 400%;
+      image-rendering: pixelated;
+    }
+
+    .achievement-entry.is-locked .catalog-star {
+      width: 54px;
+      height: 54px;
+      margin-left: 4px;
+      background: #30251f;
+      clip-path: polygon(50% 0, 61% 34%, 98% 35%, 68% 56%, 79% 93%, 50% 71%, 21% 93%, 32% 56%, 2% 35%, 39% 34%);
+      filter: drop-shadow(3px 3px 0 rgba(91, 47, 24, .32));
+    }
+
+    .achievement-entry h2 {
+      margin: 0 0 7px;
+      font-size: 19px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .achievement-entry p {
+      margin: 0;
+      color: #e16f2d;
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1.45;
+    }
+
+    .achievement-entry.is-locked h2,
+    .achievement-entry.is-locked p {
+      color: #4c4037;
+    }
+
+    .manual-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      opacity: 0;
+      visibility: hidden;
+      background: rgba(24, 12, 27, .68);
+      transition: opacity 180ms ease, visibility 180ms;
+    }
+
+    .manual-backdrop.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .manual {
+      position: relative;
+      width: min(520px, 100%);
+      min-height: 260px;
+      max-height: min(78vh, 680px);
+      overflow-y: auto;
+      padding: 34px 34px 30px;
+      color: var(--ink);
+      background:
+        repeating-linear-gradient(0deg, transparent 0 23px, rgba(116, 67, 40, .08) 23px 24px),
+        var(--paper);
+      border: 5px solid var(--wood);
+      border-radius: 6px;
+      box-shadow:
+        inset 0 0 0 4px var(--paper-dark),
+        10px 10px 0 rgba(35, 17, 34, .72);
+      transform: translateY(16px) scale(.96);
+      transition: transform 240ms var(--ease);
+    }
+
+    .manual-backdrop.is-open .manual { transform: translateY(0) scale(1); }
+
+    .manual::before {
+      content: "";
+      position: absolute;
+      inset: 14px;
+      border: 2px dashed rgba(122, 63, 37, .35);
+      pointer-events: none;
+    }
+
+    .manual h1 {
+      position: relative;
+      margin: 0 44px 22px 0;
+      color: var(--wood-dark);
+      font-size: 24px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .manual p {
+      position: relative;
+      margin: 0;
+      color: #65432f;
+      font-size: 15px;
+      line-height: 1.9;
+      white-space: pre-line;
+    }
+
+    .manual-close {
+      position: absolute;
+      z-index: 2;
+      top: 20px;
+      right: 20px;
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      cursor: pointer;
+      color: var(--paper);
+      background: #b6403d;
+      border: 3px solid var(--wood-dark);
+      box-shadow: 3px 3px 0 rgba(62, 32, 48, .35);
+    }
+
+    .manual-close:hover { background: #d65348; }
+    .manual-close:focus-visible { outline: 4px solid var(--gold); outline-offset: 3px; }
+
+    .manual-close::before,
+    .manual-close::after {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 3px;
+      background: currentColor;
+    }
+
+    .manual-close::before { transform: rotate(45deg); }
+    .manual-close::after { transform: rotate(-45deg); }
+
+    .load-error {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      z-index: 10;
+      display: none;
+      transform: translateX(-50%);
+      padding: 8px 12px;
+      color: var(--ink);
+      background: var(--gold);
+      border: 3px solid var(--wood);
+      box-shadow: 4px 4px 0 var(--wood-dark);
+      font-size: 12px;
+    }
+
+    .load-error.is-visible { display: block; }
+
+    @keyframes sign-drop {
+      0% { transform: translateY(-110%); }
+      72% { transform: translateY(2.2%); }
+      86% { transform: translateY(-1%); }
+      100% { transform: translateY(0); }
+    }
+
+    @keyframes sign-rise {
+      0% { transform: translateY(110%); }
+      72% { transform: translateY(-2.2%); }
+      86% { transform: translateY(1%); }
+      100% { transform: translateY(0); }
+    }
+
+    @keyframes enter-ready {
+      0%, 94% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    @keyframes enter-nudge {
+      0%, 100% { transform: translate(-50%, -5px) rotate(45deg); }
+      50% { transform: translate(-50%, 5px) rotate(45deg); }
+    }
+
+    @keyframes object-nudge {
+      0%, 100% { transform: translateY(0); filter: brightness(1); }
+      35% { transform: translateY(-3px); filter: brightness(1.18); }
+      70% { transform: translateY(1px); filter: brightness(1.05); }
+    }
+
+    @keyframes flower-sway {
+      0%, 100% { transform: rotate(0); }
+      30% { transform: rotate(-6deg); }
+      65% { transform: rotate(5deg); }
+    }
+
+    @keyframes computer-pulse {
+      0%, 100% { filter: brightness(1); }
+      35%, 70% { filter: brightness(1.55) drop-shadow(0 0 3px #8df3ff); }
+    }
+
+    @keyframes piano-bounce {
+      0%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-4px); }
+      60% { transform: translateY(2px); }
+    }
+
+    @keyframes lid-open {
+      0% { opacity: 0; transform: translateY(7px) scaleY(.12); }
+      35%, 78% { opacity: 1; transform: translateY(-8px) scaleY(.72); }
+      100% { opacity: 0; transform: translateY(7px) scaleY(.12); }
+    }
+
+    @keyframes keys-flash {
+      0%, 100% { opacity: 0; }
+      28%, 62% { opacity: 1; }
+    }
+
+    @keyframes note-rise {
+      0% { opacity: 0; transform: translateY(8px); }
+      18% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-34px); }
+    }
+
+    @keyframes bookcase-bump {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-2px); }
+      50% { transform: translateX(2px); }
+      75% { transform: translateX(-1px); }
+    }
+
+    @keyframes dog-idle {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-1px); }
+    }
+
+    @keyframes dog-happy {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      20% { transform: translateY(-4px) rotate(-3deg); }
+      40% { transform: translateY(0) rotate(3deg); }
+      60% { transform: translateY(-3px) rotate(-2deg); }
+      80% { transform: translateY(0) rotate(2deg); }
+    }
+
+    @keyframes cat-idle {
+      0%, 100% { transform: translateY(0) scaleY(1); }
+      50% { transform: translateY(1px) scaleY(.97); }
+    }
+
+    @keyframes cat-happy {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      22% { transform: translateY(-5px) rotate(4deg); }
+      44% { transform: translateY(0) rotate(-4deg); }
+      66% { transform: translateY(-3px) rotate(3deg); }
+      84% { transform: translateY(0) rotate(-2deg); }
+    }
+
+    @keyframes heart-pop {
+      0% { opacity: 0; transform: translateY(8px) scale(.5); }
+      20%, 60% { opacity: 1; transform: translateY(-8px) scale(1.15); }
+      100% { opacity: 0; transform: translateY(-26px) scale(.8); }
+    }
+
+    @keyframes player-bob {
+      0%, 100% { translate: 0 0; }
+      50% { translate: 0 -2px; }
+    }
+
+    @keyframes limb-forward {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(2px); }
+    }
+
+    @keyframes limb-back {
+      0%, 100% { transform: translateY(2px); }
+      50% { transform: translateY(0); }
+    }
+
+    @keyframes scene-change {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    @media (max-width: 560px) {
+      .game { padding: 8px; }
+      .character-dialogue {
+        grid-template-columns: minmax(0, 1fr) 118px;
+        min-height: 150px;
+        border-width: 5px;
+      }
+      .dialogue-copy {
+        padding: 16px 34px 20px 14px;
+        border-right-width: 5px;
+      }
+      .dialogue-copy p { font-size: 13px; line-height: 1.65; }
+      .dialogue-portrait { padding: 10px 9px 34px; }
+      .dialogue-portrait img { width: 86px; height: 86px; border-width: 4px; }
+      .dialogue-name {
+        right: 8px;
+        bottom: 7px;
+        left: 8px;
+        height: 24px;
+        font-size: 13px;
+      }
+      .dialogue-close {
+        right: 8px;
+        bottom: 8px;
+        transform: scale(.8);
+      }
+      .computer-backdrop { padding: 12px; }
+      .computer-titlebar {
+        min-width: 190px;
+        margin-left: 10px;
+        padding: 9px 16px;
+        border-width: 5px;
+        font-size: 17px;
+      }
+      .computer-panel {
+        min-height: 330px;
+        max-height: 78vh;
+        padding: 24px 18px 20px;
+        border-width: 6px;
+      }
+      .computer-intro,
+      .computer-file-copy { font-size: 13px; }
+      .desktop-files { gap: 6px; margin-top: 18px; }
+      .desktop-file { padding: 10px 3px; }
+      .file-icon { width: 48px; height: 42px; font-size: 27px; }
+      .file-name { font-size: 11px; }
+      .project-row {
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 8px;
+      }
+      .project-meta {
+        grid-column: 2;
+        font-size: 10px;
+      }
+      .game-card-list { grid-template-columns: 1fr; }
+      .game-card:first-child { grid-column: auto; }
+      .scroll-backdrop { padding: 16px; }
+      .scroll-sheet {
+        min-height: 360px;
+        padding: 50px 30px 62px;
+      }
+      .scroll-copy { font-size: 14px; line-height: 1.8; }
+      .achievement-toast {
+        top: max(10px, env(safe-area-inset-top));
+        left: 50%;
+      }
+      .achievement-star {
+        width: 50px;
+        flex-basis: 50px;
+        font-size: 31px;
+      }
+      .achievement-text {
+        max-width: calc(100vw - 66px);
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+      .achievement-board-backdrop { padding: 12px; }
+      .achievement-board-header { padding: 16px 58px 13px 16px; }
+      .achievement-board-header h1 { font-size: 22px; }
+      .achievement-entry {
+        grid-template-columns: 60px minmax(0, 1fr);
+        min-height: 76px;
+      }
+      .catalog-star { width: 52px; height: 52px; }
+      .achievement-entry.is-locked .catalog-star { width: 46px; height: 46px; }
+      .achievement-entry h2 { font-size: 16px; }
+      .achievement-entry p { font-size: 12px; }
+      .manual-backdrop { padding: 14px; }
+      .manual { min-height: 230px; padding: 30px 26px 24px; }
+      .manual h1 { font-size: 20px; }
+      .manual p { font-size: 14px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <audio id="backgroundMusic" src="source/stardew-valley-overture.m4a" preload="auto" loop></audio>
+
+  <button class="title-screen" id="titleScreen" type="button" aria-label="进入星曌谷物语">
+    <span class="title-sign title-sign-main" aria-hidden="true"></span>
+    <span class="title-sign title-sign-start" aria-hidden="true"></span>
+    <span class="enter-mark" aria-hidden="true"></span>
+  </button>
+
+  <main class="game" id="game" aria-label="星曌谷物语客厅">
+    <div class="scene-shell">
+      <div class="scene" id="scene" tabindex="0" aria-live="polite"></div>
+    </div>
+  </main>
+
+  <div class="achievement-toast" id="achievementToast" role="status" aria-live="polite">
+    <span class="achievement-star" aria-hidden="true">★</span>
+    <span class="achievement-text" id="achievementText"></span>
+  </div>
+
+  <div class="achievement-board-backdrop" id="achievementBoardBackdrop">
+    <section class="achievement-board" role="dialog" aria-modal="true" aria-labelledby="achievementBoardTitle">
+      <button class="achievement-board-close" id="achievementBoardClose" type="button" aria-label="关闭成就册">×</button>
+      <header class="achievement-board-header">
+        <h1 id="achievementBoardTitle">星星成就册</h1>
+        <span class="achievement-progress" id="achievementProgress"></span>
+      </header>
+      <div class="achievement-list" id="achievementList"></div>
+    </section>
+  </div>
+
+  <section class="character-dialogue" id="characterDialogue" role="dialog" aria-modal="true" aria-labelledby="dialogueName" aria-describedby="dialogueText">
+    <div class="dialogue-copy">
+      <p id="dialogueText"></p>
+      <button class="dialogue-close" id="dialogueClose" type="button" aria-label="关闭对话"></button>
+    </div>
+    <div class="dialogue-portrait">
+      <img id="dialoguePortraitImage" src="editor/stardew-assets/2473-Haley-38213afe09.png" alt="瑞秋">
+      <strong class="dialogue-name" id="dialogueName">瑞秋</strong>
+    </div>
+  </section>
+
+  <div class="computer-backdrop" id="computerBackdrop">
+    <section class="computer-window" role="dialog" aria-modal="true" aria-labelledby="computerTitle">
+      <h1 class="computer-titlebar" id="computerTitle">瑞秋的电脑</h1>
+      <div class="computer-panel">
+        <button class="computer-close" id="computerClose" type="button" aria-label="关闭电脑">×</button>
+        <div class="computer-home" id="computerHome">
+          <p class="computer-intro">这台机器白天替我写需求、跑模型、开八个会。
+晚上它给我跑游戏。
+同一块屏幕，同一个人。有人说这叫分裂，我觉得这叫没白活。
+桌面上三个文件夹。你要先看哪个？</p>
+          <div class="desktop-files">
+            <button class="desktop-file" type="button" data-computer-file="ai">
+              <span class="file-icon" aria-hidden="true">📁</span>
+              <span class="file-name">AI 与我</span>
+            </button>
+            <button class="desktop-file" type="button" data-computer-file="games">
+              <span class="file-icon" aria-hidden="true">🎮</span>
+              <span class="file-name">游戏库</span>
+            </button>
+            <button class="desktop-file" type="button" data-computer-file="resume">
+              <span class="file-icon" aria-hidden="true">📄</span>
+              <span class="file-name">简历.pdf</span>
+            </button>
+          </div>
+        </div>
+        <div class="computer-detail" id="computerDetail" hidden>
+          <div class="computer-file-overview" id="computerFileOverview">
+            <h2 id="computerFileTitle"></h2>
+            <p class="computer-file-copy" id="computerFileCopy"></p>
+            <button class="computer-preview-button" id="computerPreviewButton" type="button" hidden>预览</button>
+            <div class="ai-project-list" id="aiProjectList" hidden></div>
+            <div class="game-library" id="gameLibrary" hidden>
+              <div class="game-card-list" id="gameCardList"></div>
+              <p class="game-library-closing">判断一个人看两件事就够了：他书架上的书，和他游戏库里的游戏。这两样我都藏不住。</p>
+            </div>
+          </div>
+          <article class="computer-project-detail" id="computerProjectDetail" hidden>
+            <h2 id="computerProjectTitle"></h2>
+            <span class="computer-project-meta" id="computerProjectMeta"></span>
+            <p class="computer-file-copy" id="computerProjectCopy"></p>
+          </article>
+          <article class="computer-resume-preview" id="computerResumePreview" hidden>
+            <h2>简历.pdf</h2>
+            <img class="resume-preview-image" src="source/resume-preview.png" alt="简历预览">
+          </article>
+          <div class="computer-actions">
+            <button class="computer-back" id="computerBack" type="button">← 返回桌面</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="scroll-backdrop" id="scrollBackdrop">
+    <section class="scroll-sheet" id="scrollSheet" role="dialog" aria-modal="true" aria-label="床头卷轴">
+      <button class="scroll-close" id="scrollClose" type="button" aria-label="关闭卷轴">×</button>
+      <span class="scroll-page-number" id="scrollPageNumber"></span>
+      <p class="scroll-copy" id="scrollCopy"></p>
+      <div class="scroll-controls">
+        <button class="scroll-nav" id="scrollPrev" type="button" aria-label="上一页">←</button>
+        <button class="scroll-nav" id="scrollNext" type="button" aria-label="下一页">→</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="manual-backdrop" id="manualBackdrop" role="presentation">
+    <section class="manual" role="dialog" aria-modal="true" aria-labelledby="manualTitle">
+      <button class="manual-close" id="manualClose" type="button" aria-label="关闭说明书"></button>
+      <h1 id="manualTitle"></h1>
+      <p id="manualBody"></p>
+    </section>
+  </div>
+
+  <p class="load-error" id="loadError">场景数据未载入，正在使用图片预览。</p>
+
+  <script src="scene-data/scenes.js"></script>
+  <script>
+    (() => {
+      const FARM_HEART_ID = 43;
+      const BEDROOM_HEART_ID = 122;
+      const INTERACTION_CONFIG = {
+        living: {
+          112: { key: "piano", label: "弹奏钢琴并打开说明书" },
+          115: { key: "bookcase", label: "打开书架说明书" },
+          120: { key: "meal", label: "查看桌上的饭" },
+          122: { key: "chest", label: "查看客厅的箱子" }
+        },
+        farm: {
+          2: { key: "shippingBox", label: "查看房子旁边的垃圾箱" },
+          36: { key: "dog", label: "摸摸小狗并打开说明书", distance: 18 },
+          37: { key: "butterfly", label: "捕捉蝴蝶", distance: 24 },
+          38: { key: "butterfly", label: "捕捉蝴蝶", distance: 24 },
+          39: { key: "butterfly", label: "捕捉蝴蝶", distance: 24 },
+          40: { key: "butterfly", label: "捕捉蝴蝶", distance: 24 },
+          44: { key: "statue", label: "查看门口的雕像" },
+          45: { key: "blueToy", label: "查看收纳箱背后的蓝色玩偶" },
+          46: { key: "redFlowers", label: "查看红色小花" },
+          47: { key: "redFlowers", label: "查看红色小花" },
+          48: { key: "redFlowers", label: "查看红色小花" },
+          49: { key: "redFlowers", label: "查看红色小花" },
+          52: { key: "sunflower", label: "查看向日葵" },
+          53: { key: "sunflower", label: "查看向日葵" },
+          54: { key: "carrot", label: "查看胡萝卜" }
+        },
+        bedroom: {
+          110: { key: "bed", label: "查看卧室里的床" },
+          112: { key: "computer", label: "使用电脑" },
+          121: { key: "cat", label: "摸摸小猫" },
+          125: { key: "scroll", label: "查看床头柜上的卷轴" },
+          126: { key: "coffee", label: "查看咖啡" }
+        }
+      };
+      const PLAYER_WIDTH = 30;
+      const PLAYER_HEIGHT = 46;
+      const PLAYER_SPEED = 112;
+      const INTERACTION_DISTANCE = 34;
+      const ASSET_PREFIX = "editor/";
+      const SCENES = {
+        living: {
+          data: "scene-data/living-room.json",
+          fallback: "scene-data/living-room.png",
+          label: "星曌谷物语客厅"
+        },
+        farm: {
+          data: "scene-data/farm.json",
+          fallback: "scene-data/farm.png",
+          label: "星曌谷物语草地"
+        },
+        bedroom: {
+          data: "scene-data/bedroom.json",
+          fallback: "scene-data/bedroom.png",
+          label: "星曌谷物语卧室"
+        }
+      };
+      const SCENE_VIEWPORTS = {
+        living: { x: 384, y: 64, width: 312, height: 392 },
+        farm: { x: 288, y: 56, width: 576, height: 360 },
+        bedroom: { x: 424, y: 56, width: 248, height: 320 }
+      };
+      const SCENE_NAV = {
+        living: {
+          bounds: { minX: 408, maxX: 616, minY: 176, maxY: 390 },
+          spawns: {
+            initial: { x: 520, y: 300 },
+            farm: { x: 508, y: 328 },
+            bedroom: { x: 584, y: 286 }
+          },
+          exits: [
+            { x: 490, y: 398, width: 60, height: 44, target: "farm" },
+            { x: 620, y: 286, width: 52, height: 76, target: "bedroom" }
+          ]
+        },
+        farm: {
+          bounds: { minX: 304, maxX: 824, minY: 88, maxY: 378 },
+          spawns: {
+            living: { x: 560, y: 260 }
+          },
+          exits: [
+            { x: 548, y: 166, width: 52, height: 82, target: "living" }
+          ]
+        },
+        bedroom: {
+          bounds: { minX: 440, maxX: 632, minY: 112, maxY: 316 },
+          spawns: {
+            living: { x: 480, y: 240 }
+          },
+          exits: [
+            { x: 436, y: 240, width: 44, height: 104, target: "living" }
+          ]
+        }
+      };
+      const SCENE_COLLIDERS = {
+        living: [
+          { x: 458, y: 196, width: 124, height: 38, name: "钢琴" },
+          { x: 564, y: 190, width: 72, height: 44, name: "书架" },
+          { x: 406, y: 198, width: 68, height: 36, name: "左侧柜子与盆栽" },
+          { x: 596, y: 278, width: 40, height: 32, name: "右侧盆栽" },
+          { x: 420, y: 318, width: 30, height: 28, name: "椅子" },
+          { x: 406, y: 364, width: 60, height: 40, name: "餐桌" }
+        ],
+        farm: [
+          { x: 304, y: 72, width: 94, height: 154, name: "左上树木" },
+          { x: 304, y: 296, width: 92, height: 104, name: "左下树木" },
+          { x: 774, y: 72, width: 74, height: 154, name: "右上树木" },
+          { x: 782, y: 238, width: 66, height: 100, name: "右侧树木" },
+          { x: 772, y: 330, width: 76, height: 70, name: "右下树木与盆栽" },
+          { x: 456, y: 86, width: 104, height: 146, name: "房屋左侧" },
+          { x: 592, y: 86, width: 100, height: 146, name: "房屋右侧" },
+          { x: 560, y: 86, width: 32, height: 98, name: "房屋屋顶" },
+          { x: 452, y: 216, width: 108, height: 34, name: "左侧栏杆" },
+          { x: 592, y: 216, width: 112, height: 34, name: "右侧栏杆" },
+          { x: 696, y: 216, width: 34, height: 34, name: "出货箱" },
+          { x: 596, y: 234, width: 32, height: 32, name: "雕像" },
+          { x: 396, y: 290, width: 48, height: 32, name: "小狗" },
+          { x: 370, y: 168, width: 42, height: 52, name: "向日葵" },
+          { x: 620, y: 324, width: 48, height: 40, name: "花圃" },
+          { x: 356, y: 332, width: 32, height: 30, name: "木桩" },
+          { x: 772, y: 322, width: 32, height: 72, name: "盆栽" }
+        ],
+        bedroom: [
+          { x: 460, y: 174, width: 40, height: 38, name: "电脑桌" },
+          { x: 548, y: 170, width: 32, height: 26, name: "床头柜" },
+          { x: 572, y: 182, width: 64, height: 38, name: "床" },
+          { x: 508, y: 278, width: 64, height: 38, name: "茶桌" },
+          { x: 604, y: 306, width: 34, height: 32, name: "盆栽" },
+          { x: 476, y: 310, width: 32, height: 28, name: "小猫" }
+        ]
+      };
+      const scene = document.querySelector("#scene");
+      const game = document.querySelector("#game");
+      const titleScreen = document.querySelector("#titleScreen");
+      const backgroundMusic = document.querySelector("#backgroundMusic");
+      const manualBackdrop = document.querySelector("#manualBackdrop");
+      const manualTitle = document.querySelector("#manualTitle");
+      const manualBody = document.querySelector("#manualBody");
+      const manualClose = document.querySelector("#manualClose");
+      const characterDialogue = document.querySelector("#characterDialogue");
+      const dialogueText = document.querySelector("#dialogueText");
+      const dialogueName = document.querySelector("#dialogueName");
+      const dialoguePortraitImage = document.querySelector("#dialoguePortraitImage");
+      const dialogueClose = document.querySelector("#dialogueClose");
+      const computerBackdrop = document.querySelector("#computerBackdrop");
+      const computerHome = document.querySelector("#computerHome");
+      const computerDetail = document.querySelector("#computerDetail");
+      const computerFileOverview = document.querySelector("#computerFileOverview");
+      const computerFileTitle = document.querySelector("#computerFileTitle");
+      const computerFileCopy = document.querySelector("#computerFileCopy");
+      const aiProjectList = document.querySelector("#aiProjectList");
+      const gameLibrary = document.querySelector("#gameLibrary");
+      const gameCardList = document.querySelector("#gameCardList");
+      const computerProjectDetail = document.querySelector("#computerProjectDetail");
+      const computerProjectTitle = document.querySelector("#computerProjectTitle");
+      const computerProjectMeta = document.querySelector("#computerProjectMeta");
+      const computerProjectCopy = document.querySelector("#computerProjectCopy");
+      const computerPreviewButton = document.querySelector("#computerPreviewButton");
+      const computerResumePreview = document.querySelector("#computerResumePreview");
+      const computerBack = document.querySelector("#computerBack");
+      const computerClose = document.querySelector("#computerClose");
+      const scrollBackdrop = document.querySelector("#scrollBackdrop");
+      const scrollSheet = document.querySelector("#scrollSheet");
+      const scrollCopy = document.querySelector("#scrollCopy");
+      const scrollPageNumber = document.querySelector("#scrollPageNumber");
+      const scrollPrev = document.querySelector("#scrollPrev");
+      const scrollNext = document.querySelector("#scrollNext");
+      const scrollClose = document.querySelector("#scrollClose");
+      const achievementToast = document.querySelector("#achievementToast");
+      const achievementText = document.querySelector("#achievementText");
+      const achievementBoardBackdrop = document.querySelector("#achievementBoardBackdrop");
+      const achievementBoardClose = document.querySelector("#achievementBoardClose");
+      const achievementProgress = document.querySelector("#achievementProgress");
+      const achievementList = document.querySelector("#achievementList");
+      const loadError = document.querySelector("#loadError");
+      let lastFocusedObject = null;
+      let pianoTimer = null;
+      let dogTimer = null;
+      let catTimer = null;
+      let audioContext = null;
+      let currentScene = "living";
+      let sceneBusy = false;
+      let player = null;
+      let playerX = 0;
+      let playerY = 0;
+      let lastFrameTime = 0;
+      let transitionReadyAt = 0;
+      let lastDialogueIndex = -1;
+      let scrollPage = 0;
+      let achievementTimer = null;
+      let achievementShowing = false;
+      let completionDialogueShown = false;
+      let titleAssembled = false;
+      let titleReady = false;
+      const achievementQueue = [];
+      const unlockedAchievements = new Set();
+      localStorage.removeItem("xingzhaogu-achievements");
+      const movementKeys = new Set();
+      const ACHIEVEMENT_CATALOG = [
+        { key: "scroll", title: "欢迎光临", method: "展开床头卷轴" },
+        { key: "piano", title: "第四页", method: "掀开琴盖" },
+        { key: "bookcase", title: "阿加莎专区", method: "点开书架" },
+        { key: "chest", title: "半途而废收藏家", method: "打开那只落灰的木箱" },
+        { key: "dog", title: "人间天使", method: "摸一下小狗" },
+        { key: "cat", title: "保持距离", method: "点开小猫（它多半不理你）" },
+        { key: "meal", title: "重口味", method: "点开那盘菜" },
+        { key: "coffee", title: "今日续命中", method: "点开咖啡" },
+        { key: "bed", title: "今日结算", method: "点开床" },
+        { key: "garden-flower", title: "我记得浇水", method: "点开院子里的四株红花" },
+        { key: "sunflower", title: "我就是太阳！", method: "点开向日葵" },
+        { key: "carrot", title: "你也看到它了", method: "找到藏起来的胡萝卜" },
+        { key: "computer", title: "同一个人", method: "打开电脑桌面" },
+        { key: "first-butterfly", title: "你也喜欢花吗", method: "抓到第一只蝴蝶" },
+        { key: "resume-prank", title: "你被骗啦！", method: "预览简历.pdf" }
+      ];
+      const INTERACTION_ACHIEVEMENTS = {
+        scroll: { key: "scroll", title: "欢迎光临" },
+        piano: { key: "piano", title: "第四页" },
+        bookcase: { key: "bookcase", title: "阿加莎专区" },
+        chest: { key: "chest", title: "半途而废收藏家" },
+        dog: { key: "dog", title: "人间天使" },
+        cat: { key: "cat", title: "保持距离" },
+        meal: { key: "meal", title: "重口味" },
+        coffee: { key: "coffee", title: "今日续命中" },
+        bed: { key: "bed", title: "今日结算" },
+        redFlowers: { key: "garden-flower", title: "我记得浇水" },
+        sunflower: { key: "sunflower", title: "我就是太阳！" },
+        carrot: { key: "carrot", title: "你也看到它了" },
+        computer: { key: "computer", title: "同一个人" },
+        blueToy: { key: "hidden-self", title: "遗落的自己", hidden: true }
+      };
+      const INTRO_DIALOGUE = `欢迎参观我的世界。有想了解的物品靠近点击空格即可；
+点击我也可以进行对话。还有一些彩蛋等你来发掘。`;
+      const COMPLETION_DIALOGUE = `你把我的房间翻遍了。
+
+说实话，我这个人不太指望被完整地理解。但你愿意花这个时间，那我也没什么好藏的了。
+
+谢谢你看到这里。——这句话我只写给走到这一步的人。`;
+      const RACHEL_DIALOGUES = [
+        "嘿。等一下，我看完这一行就理你。",
+        "你要不要听我弹一段？就一小段。",
+        "咖啡凉了。我打算假装没注意到。",
+        "我刚才被自己写的需求文档绕晕了。写的人是我，晕的人也是我。",
+        "我给狗和猫拍了 40 张照片，没有一张看镜头。它们有它们自己的想法。",
+        "我在做一个能替我上班的数字员工。目前它只会问我「在吗」。",
+        "你要不要也养点什么？活的东西会提醒你今天是星期几。",
+        "这条裙子是为了跳舞买的。穿去上班有点亏。",
+        "我数了一下，我同时有七个项目在跑。……八个。算了，不重要。",
+        "AI 最难的不是写代码，是搞清楚人到底想要什么。包括搞清楚我自己。",
+        "如果你现在没事，我给你看仓鼠跑轮子。可以看好久。",
+        "我把「以后再说」这个文件夹打开看了一眼，又关上了。",
+        "今晚的目标是早睡。这是今天立的第七个目标。",
+        "你说人为什么非要在二十几岁想清楚一生要做什么。想不清楚也很正常吧。",
+        "今天学会了一个新东西。虽然很小，但是新的。"
+      ];
+      const SCROLL_PAGES = [
+        `我不吃猪肉。别人问我为什么，我一概说'我是回族'——这个答案最短，也最好用。
+
+真实原因是另外一件事，比回族复杂。
+
+你要是当面问我，我可能会说。在这儿不行。`,
+        `有时候我会一本正经地胡说八道。等对方真的点头了，我会特别开心地告诉他：刚才全是乱说的。
+
+我不知道这算不算坏毛病。但那几秒钟，是我一天里最快乐的几秒钟之一。`,
+        `喜欢的书我会看很多遍，喜欢的电影也是。别人说这是怀旧，我觉得不是——我只是不太舍得从里面出来。
+
+喜欢的一切，我都会喜欢很久。`
+      ];
+      const COMPUTER_FILES = {
+        ai: {
+          title: "AI 与我",
+          copy: "先说好：这里没有把简历换个文件夹再讲一遍。每个项目都经过熬夜、返工和「这版真的是最终版」认证。"
+        },
+        games: {
+          title: "游戏库",
+          copy: "偶尔在工作完精疲力尽后玩一会儿。库里攒了 47 个，真正通关的只有 3 个——买游戏和玩游戏，好像是两种爱好。"
+        },
+        resume: {
+          title: "简历.pdf",
+          copy: "正式版本在这儿。想先看打印体的也可以。（但我建议你看第一个。）"
+        }
+      };
+      const AI_PROJECTS = [
+        {
+          title: "仓鼠桌宠",
+          meta: "MVP 桌面应用 · 私人项目",
+          body: `素材是我家仓鼠。我给它做了四个状态的动画：睡觉、发呆、洗脸、跑轮子。
+
+它会自己循环，也会偷看你在不在打字——你停下来超过两秒，它就开始洗脸。
+
+没什么实际用途。是我做过的所有东西里最喜欢的一个。`
+        },
+        {
+          title: "医疗量表公式引擎",
+          meta: "医疗 AI · 主业",
+          body: `医院在用的医学量表，原本是几百条英文公式，写死在系统里没人核对过。
+
+我给它们做了一套能搜、能手动登记、能按科室浏览的引擎，顺手把里面的问题分级审出一百多条。
+
+那一个月看的不是代码，是变量名。现在做梦都能背出几个。`
+        },
+        {
+          title: "PubMed 论文召回系统",
+          meta: "RAG · 评测",
+          body: `给医生用的论文检索。
+
+做完我发现，"好用"这两个字不能自己说，得有证据。于是我出了上百道题，跨十几个科室，一份份打分，还拉了官方数据库做对照。最后挑出三个最弱的科室，把期刊清单一路扩充到接近一百本。
+
+这件事到现在还在改。`
+        },
+        {
+          title: "IT 运维数字员工",
+          meta: "AI Agent",
+          body: `让 AI 替运维工程师值第一轮班：接告警、查日志、给结论。
+
+这个项目教会我一件事——AI 不该替人拍板，但可以替人少熬两个小时的夜。
+
+后来我做所有产品，都拿这条当尺子。`
+        },
+        {
+          title: "浏览器端视频剪辑",
+          meta: "前端工程 · 全链路",
+          body: `不用装任何软件，打开网页就能剪视频。
+
+底层是在浏览器里跑的 FFmpeg，配合云端存储和账号体系，最后打包成了 Windows 和 Linux 安装包，还有一个安卓版。
+
+最难的部分从来不是剪辑本身，是让它在浏览器里不崩。`
+        },
+        {
+          title: "全球人口结构可视化",
+          meta: "数据可视化",
+          body: `联合国 1950 到 2100 年的人口数据，四个国家，横跨一个半世纪。
+
+我把生育率、城市化率、老龄化率放在同一张图里看——你会发现"人口红利"其实是有截止日期的东西。
+
+数据不会说话，但你把它画对了，它自己就开始讲了。`
+        },
+        {
+          title: "算命助手",
+          meta: "LLM 应用",
+          body: `用大模型做命理对话。
+
+做久了发现，来问的人多半不是真想知道未来，是想找个地方把现在的事说一遍。所以它的核心能力不是算得准，是接得住话。
+
+这个洞察，比模型本身值钱。`
+        }
+      ];
+
+      const GAME_LIBRARY = [
+        {
+          title: "星露谷物语",
+          meta: "100+ 小时",
+          icon: "🌱",
+          body: `这个网站长这样，就是因为这款游戏。
+
+一百多个小时，我大部分时间在做一件毫无意义的事：决定今天干什么。浇水、喂鸡、跟人说两句话。没人催你，也没人因为你今天什么都没干而失望。
+
+后来才想明白——我最想要的其实不是赢，是'今天过完了、明天还没开始'的那几分钟。`
+        },
+        {
+          title: "塞尔达传说",
+          meta: "50+ 小时",
+          icon: "🗡️",
+          body: `五十多个小时，主线基本没怎么推。
+
+它给我一种别的游戏给不了的东西：地图上任何一个方向，你都能去。没人拦你，也没人告诉你下一步该往哪走。
+
+我在里面干得最多的是爬山，以及在雨天怎么都生不着火。奇怪，我还挺享受的。`
+        },
+        {
+          title: "模拟人生",
+          meta: "几十小时",
+          icon: "🏠",
+          body: `几十个小时，基本都花在捏人和看他们谈恋爱上了。
+
+剩下的时间在给小人挑家具、改户型、安排谁跟谁住一块儿。偶尔修个游泳池，然后把梯子抽掉。
+
+别问我为什么这么做。你试过你就知道了。`
+        },
+        {
+          title: "王者荣耀",
+          meta: "10 年",
+          icon: "⚔️",
+          body: `十年。这是我玩得最长的一个，长到它已经不算爱好了，算习惯。
+
+MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人心里都在打自己小算盘的感觉。
+
+脾气也被它磨平了不少。大部分时候啊——大部分时候。`
+        },
+        {
+          title: "金铲铲之战",
+          meta: "两年多",
+          icon: "🪙",
+          body: `两年多。两个字总结：赌狗。
+
+自走棋最爽的瞬间就是你决定不按套路来，然后看运气给不给面子。赢了能吹三天，输了怪发牌员。
+
+它治好了我一部分完美主义——或者说，它让我承认了我这人本质上就是在赌。`
+        }
+      ];
+
+      const manuals = {
+        piano: {
+          title: "一架老旧的钢琴",
+          body: `学了十年。
+
+最喜欢贝多芬，其次是爵士。一个情绪全写在脸上，一个什么都不写在脸上——两种我都要。
+
+后来课太满了，练琴的时间就被一点点挤掉了。说不可惜是假的。
+
+但我没打算就这么算了。等忙过这一阵，我会回去的。`
+        },
+        bookcase: {
+          title: "一座快被塞满的书架",
+          body: `推理小说是我的主食，阿加莎是主食里的主食。《无人生还》《东方快车》，翻得书脊都起了毛边。历史类的我也看，就是读得慢，一年啃完几本算交差。
+
+我看推理有个毛病：总在揭晓凶手之前停下来猜一次。猜对的时候不多，但每次都很得意。
+
+另外——我'想读'那一摞，已经比这三年读完的还高了。我知道，别提醒我。`
+        },
+        dog: {
+          title: "一位人间天使",
+          body: `从小喜欢到现在，没变过。大的小的、卷毛的短毛的、会拆家的和只会睡觉的，我都爱。路上看到任何一只都要停下来看两眼。
+
+我一直说狗是人间天使。
+
+因为它不管你今天表现好不好，你一开门它就冲过来。这一点我真的很服气。`
+        },
+        cat: {
+          title: "一位保持距离的室友",
+          body: `猫不一样。猫好看，安静，有分寸。
+
+我觉得它更适合观赏——端坐在那儿自成一个世界，你偶尔被允许看一眼，已经是恩赐了。
+
+你要凑上去，它多半不理你。这事我接受了，保持距离就好。
+
+至于它怎么看我，我大概永远不会知道。`
+        },
+        meal: {
+          title: "一盘很有态度的川菜",
+          body: `川菜。红油、花椒、豆瓣，一样都不能少。
+
+在外地待久了才明白，想的根本不是某一道菜，是那种一进门就先打三个喷嚏的味道。
+
+外卖软件上点过好几次川菜，吃完更想家了。
+
+我的标准很朴素：辣不辣是态度问题，麻不麻是技术问题。`
+        },
+        chest: {
+          title: "舍不得清空的木箱",
+          body: `里面有把吉他，一支葫芦丝，还有几样我自己都叫不出名字的东西。全是灰。
+
+每一样都是某年突然上头买的，学了两个礼拜，发现自己确实没什么天赋，就放下了。
+
+钢琴那个是被时间挤掉的，这些是我不行，我自己承认。
+
+但每次搬家我还是会把它们收好。问我要不丢的理由，我说不上来。`
+        },
+        statue: {
+          title: "门口的雕像",
+          body: "这里将展示雕像对应的故事。内容准备好后可直接替换。"
+        },
+        sunflower: {
+          title: "多动的花",
+          body: `我喜欢向日葵，这点我自己都觉得有点土。太光明了，说出来像在演。
+
+但它真正打动我的不是'向阳'，是它转得特别用力——一天下来整株都拧着，姿势一点都不优雅。
+
+我觉得我就是这样：往有光的地方使劲扭，动作不好看，但一直在动。
+
+顺便说一句，它结籽之后会低头。我觉得那会儿最好看。`
+        },
+        redFlowers: {
+          title: "四朵不肯安静的小红花",
+          body: `房间里的东西基本都'有点用'：钢琴算门手艺，咖啡算燃料，垃圾桶算情绪出口。
+
+只有院子外面这四朵，什么都不给我。不会响，不结果，开完了还会谢。
+
+但你每天早上得先去看它们一眼——活不活，全看你今天有没有记得浇水。
+
+说实话我挺需要这种'没用但得照顾'的东西的。不然整天盯着的都是效率和产出，人会坏的。
+
+另外是四株。别问我为什么是四株，我数过好几遍了。`
+        },
+        carrot: {
+          title: "正在长大的胡萝卜",
+          body: `我讨厌这个东西。没有特别的理由，就是讨厌。所以我把它放在房间最远的角落，希望你找不到。
+
+我很早就知道吃胡萝卜对眼睛好。
+
+我的视力确实不太好。
+
+这两件事之间应该是有关系的。我不打算深究。`
+        },
+        shippingBox: {
+          title: "负责收留坏心情的垃圾箱",
+          body: `每天都在用。外卖盒、草稿纸、写了又删的方案。
+
+我有个习惯：倒垃圾的时候顺手把心情也清一遍——今天的烦、没说出口的话、不太体面的情绪，一起系紧袋口拎下楼。
+
+垃圾桶离单元门有点远。那几步路，刚好够我想清楚一件事。`
+        },
+        blueToy: {
+          title: "不在清单上的东西",
+          body: `这个不在清单上。
+
+它是被我扔过一次的东西。大概是某个时候突然觉得，抱着它睡觉有点幼稚，就塞到看不见的地方去了。后来又自己翻了出来。
+
+我不确定这算不算童真。可能我只是需要一个不长进、不会过期、也不要求我变厉害的东西。
+
+把它放在这里，意思是我承认这件事——但还没完全敢把它摆到明面上。`
+        },
+        computer: {
+          title: "电脑",
+          body: "这里将展示电脑对应的经历与作品。内容准备好后可直接替换。"
+        },
+        scroll: {
+          title: "床头柜上的卷轴",
+          body: "这里将展示卷轴记录的内容。内容准备好后可直接替换。"
+        },
+        coffee: {
+          title: "一杯续命咖啡",
+          body: `打工人的续命道具，一天两杯，不许缺席。
+
+早上那杯用来开机，下午那杯用来假装自己还剩一半体力。
+
+说实话我并不觉得好喝，就是不加撑不住。
+
+戒过三次了。第四次下星期开始。（上次也是这么说的。）`
+        },
+        bed: {
+          title: "重生点",
+          body: `我一天里最诚实的时候，是躺在这张床上的时候。
+
+白天的时间基本都不是我的——上课、开会、改需求。只有躺下之后那一两个小时是属于自己的，所以我老舍不得睡，哪怕明早一定会恨自己。
+
+早上最难的不是起来，是承认新的一天又排满了。
+
+不过躺进去就等于结算了。不管今天糟成什么样，睡一觉，明天还是照常开始。`
+        }
+      };
+
+      function fitScene() {
+        const padding = window.innerWidth <= 560 ? 16 : 32;
+        const availableWidth = Math.max(1, window.innerWidth - padding);
+        const availableHeight = Math.max(1, window.innerHeight - padding);
+        const viewport = SCENE_VIEWPORTS[currentScene];
+        const scale = Math.min(
+          availableWidth / viewport.width,
+          availableHeight / viewport.height
+        );
+        document.documentElement.style.setProperty("--scene-scale", String(scale));
+        scene.parentElement.style.width = `${viewport.width * scale}px`;
+        scene.parentElement.style.height = `${viewport.height * scale}px`;
+        scene.style.left = `${-viewport.x * scale}px`;
+        scene.style.top = `${-viewport.y * scale}px`;
+        scene.style.transform = `scale(${scale})`;
+      }
+
+      function objectTransform(item) {
+        const flipX = Number(item.flipX) || 1;
+        const flipY = Number(item.flipY) || 1;
+        const rotation = Number(item.rotation) || 0;
+        return `rotate(${rotation}deg) scale(${flipX}, ${flipY})`;
+      }
+
+      function makeDecoration(className) {
+        const element = document.createElement("span");
+        element.className = className;
+        element.setAttribute("aria-hidden", "true");
+        return element;
+      }
+
+      function makeSceneObject(item, sceneKey) {
+        const isLiving = sceneKey === "living";
+        const isFarm = sceneKey === "farm";
+        const isBedroom = sceneKey === "bedroom";
+        const interaction = INTERACTION_CONFIG[sceneKey]?.[item.id];
+        const element = document.createElement(interaction ? "button" : "div");
+        element.className = "scene-object";
+        element.style.left = `${item.x}px`;
+        element.style.top = `${item.y}px`;
+        element.style.width = `${item.width}px`;
+        element.style.height = `${item.height}px`;
+        element.style.zIndex = String(item.z ?? 0);
+        element.style.opacity = String(item.opacity ?? 1);
+        element.style.transform = objectTransform(item);
+        element.dataset.objectId = String(item.id);
+
+        const image = document.createElement("img");
+        image.className = "object-img";
+        image.src = /^(data:|https?:)/.test(item.src) ? item.src : `${ASSET_PREFIX}${item.src}`;
+        image.alt = "";
+        image.draggable = false;
+        element.append(image);
+
+        if (interaction) {
+          element.type = "button";
+          element.classList.add("interactive", interaction.key);
+          element.setAttribute("aria-label", interaction.label);
+          element.dataset.interaction = interaction.key;
+          element.dataset.interactionDistance = String(interaction.distance ?? INTERACTION_DISTANCE);
+          element.addEventListener("click", () => attemptInteraction(element, activateInteraction));
+        }
+
+        if (interaction?.key === "piano") {
+          element.append(
+            makeDecoration("piano-lid"),
+            makeDecoration("key-glow"),
+            makeDecoration("music-note one")
+          );
+          const secondNote = makeDecoration("music-note two");
+          element.querySelector(".music-note.one").textContent = "♪";
+          secondNote.textContent = "♫";
+          element.append(secondNote);
+        }
+
+        if (
+          (isFarm && item.id === FARM_HEART_ID) ||
+          (isBedroom && item.id === BEDROOM_HEART_ID)
+        ) {
+          element.classList.add("scene-heart");
+          if (isBedroom) element.classList.add("cat-heart");
+          element.style.opacity = "0";
+        }
+
+        return element;
+      }
+
+      function makePlayer(sceneKey, fromScene) {
+        const spawn =
+          SCENE_NAV[sceneKey].spawns[fromScene] ||
+          SCENE_NAV[sceneKey].spawns.initial ||
+          Object.values(SCENE_NAV[sceneKey].spawns)[0];
+        const element = document.createElement("button");
+        element.type = "button";
+        element.className = "player-character";
+        element.dataset.direction = "down";
+        element.setAttribute("aria-label", "与瑞秋对话");
+        element.innerHTML = `
+          <span class="player-shadow"></span>
+          <span class="player-avatar">
+            <img class="player-sprite player-front" src="source/player/front.png" alt="">
+            <img class="player-sprite player-side" src="source/player/side.png" alt="">
+            <img class="player-sprite player-back" src="source/player/back.png" alt="">
+          </span>
+          <span class="player-step"></span>
+        `;
+        element.addEventListener("click", event => {
+          event.stopPropagation();
+          showRachelDialogue();
+        });
+        playerX = spawn.x;
+        playerY = spawn.y;
+        player = element;
+        renderPlayer();
+        return element;
+      }
+
+      async function loadScene(sceneKey = "living", animate = false, fromScene = "initial") {
+        const config = SCENES[sceneKey];
+        if (!config) return;
+
+        try {
+          let data = window.__SCENE_DATA__?.[sceneKey];
+          if (!data) {
+            const response = await fetch(config.data, { cache: "no-store" });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            data = await response.json();
+          }
+          const objects = [...data.objects].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+          currentScene = sceneKey;
+          fitScene();
+          game.setAttribute("aria-label", config.label);
+          scene.style.backgroundColor = data.canvas?.color || "#cfbd92";
+          scene.style.backgroundImage = "none";
+          scene.replaceChildren(
+            ...objects.map(item => makeSceneObject(item, sceneKey)),
+            makePlayer(sceneKey, fromScene)
+          );
+          updateInteractionProximity();
+          scene.classList.add("has-data");
+          loadError.classList.remove("is-visible");
+          transitionReadyAt = performance.now() + 500;
+
+          if (animate) {
+            scene.classList.remove("is-switching");
+            void scene.offsetWidth;
+            scene.classList.add("is-switching");
+          }
+        } catch (error) {
+          console.error(`Unable to load ${sceneKey} scene data:`, error);
+          scene.style.backgroundImage = `url("${config.fallback}")`;
+          scene.classList.remove("has-data");
+          loadError.classList.add("is-visible");
+        } finally {
+          sceneBusy = false;
+        }
+      }
+
+      function switchScene(sceneKey) {
+        if (sceneBusy || sceneKey === currentScene) return;
+        const fromScene = currentScene;
+        sceneBusy = true;
+        lastFocusedObject = null;
+        movementKeys.clear();
+        loadScene(sceneKey, true, fromScene);
+      }
+
+      function renderPlayer() {
+        if (!player) return;
+        player.style.left = `${Math.round(playerX)}px`;
+        player.style.top = `${Math.round(playerY)}px`;
+        updateInteractionProximity();
+      }
+
+      function distanceToObject(element) {
+        const footX = playerX + PLAYER_WIDTH / 2;
+        const footY = playerY + PLAYER_HEIGHT;
+        const nearestX = Math.max(element.offsetLeft, Math.min(footX, element.offsetLeft + element.offsetWidth));
+        const nearestY = Math.max(element.offsetTop, Math.min(footY, element.offsetTop + element.offsetHeight));
+        return Math.hypot(footX - nearestX, footY - nearestY);
+      }
+
+      function updateInteractionProximity() {
+        if (!player) return;
+        scene.querySelectorAll(".scene-object.interactive").forEach(element => {
+          const interactionDistance = Number(element.dataset.interactionDistance) || INTERACTION_DISTANCE;
+          element.classList.toggle("is-near", distanceToObject(element) <= interactionDistance);
+        });
+      }
+
+      function attemptInteraction(element, action) {
+        if (!element.classList.contains("is-near") || sceneBusy) return;
+        player?.classList.remove("is-walking");
+        action(element);
+        const achievement = INTERACTION_ACHIEVEMENTS[element.dataset.interaction];
+        if (achievement) {
+          const prefix = achievement.hidden ? "隐藏成就" : "新成就";
+          unlockAchievement(achievement.key, `${prefix}：${achievement.title}`);
+        }
+      }
+
+      function activateInteraction(element) {
+        const actions = {
+          piano: playPiano,
+          bookcase: readBookcase,
+          dog: petDog,
+          cat: petCat,
+          computer: openComputer,
+          scroll: openScroll,
+          butterfly: catchButterfly,
+          statue: openAchievementBoard
+        };
+        const action = actions[element.dataset.interaction];
+        if (action) {
+          action(element);
+        } else {
+          inspectObject(element, element.dataset.interaction);
+        }
+      }
+
+      function interactWithNearestObject() {
+        const nearby = [...scene.querySelectorAll(".scene-object.interactive.is-near")]
+          .sort((a, b) => distanceToObject(a) - distanceToObject(b))[0];
+        if (!nearby) return;
+
+        attemptInteraction(nearby, activateInteraction);
+      }
+
+      function setDirection(dx, dy) {
+        if (!player || (!dx && !dy)) return;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          player.dataset.direction = dx < 0 ? "left" : "right";
+        } else {
+          player.dataset.direction = dy < 0 ? "up" : "down";
+        }
+      }
+
+      function clampPlayer() {
+        const bounds = SCENE_NAV[currentScene].bounds;
+        playerX = Math.min(bounds.maxX, Math.max(bounds.minX, playerX));
+        playerY = Math.min(bounds.maxY, Math.max(bounds.minY, playerY));
+      }
+
+      function playerHitbox(x, y) {
+        return {
+          x: x + 7,
+          y: y + 34,
+          width: 16,
+          height: 12
+        };
+      }
+
+      function rectanglesOverlap(a, b) {
+        return (
+          a.x < b.x + b.width &&
+          a.x + a.width > b.x &&
+          a.y < b.y + b.height &&
+          a.y + a.height > b.y
+        );
+      }
+
+      function canOccupy(x, y) {
+        const hitbox = playerHitbox(x, y);
+        return !SCENE_COLLIDERS[currentScene].some(obstacle =>
+          rectanglesOverlap(hitbox, obstacle)
+        );
+      }
+
+      function checkSceneExit(now) {
+        if (now < transitionReadyAt || sceneBusy || !player) return;
+        const footX = playerX + PLAYER_WIDTH / 2;
+        const footY = playerY + PLAYER_HEIGHT;
+        const exit = SCENE_NAV[currentScene].exits.find(zone =>
+          footX >= zone.x &&
+          footX <= zone.x + zone.width &&
+          footY >= zone.y &&
+          footY <= zone.y + zone.height
+        );
+        if (exit) switchScene(exit.target);
+      }
+
+      function movePlayer(now) {
+        const elapsed = lastFrameTime ? Math.min((now - lastFrameTime) / 1000, .05) : 0;
+        lastFrameTime = now;
+
+        if (
+          !player ||
+          sceneBusy ||
+          manualBackdrop.classList.contains("is-open") ||
+          characterDialogue.classList.contains("is-open") ||
+          computerBackdrop.classList.contains("is-open") ||
+          scrollBackdrop.classList.contains("is-open") ||
+          achievementBoardBackdrop.classList.contains("is-open")
+        ) {
+          requestAnimationFrame(movePlayer);
+          return;
+        }
+
+        let dx = 0;
+        let dy = 0;
+        if (movementKeys.has("arrowleft") || movementKeys.has("a")) dx -= 1;
+        if (movementKeys.has("arrowright") || movementKeys.has("d")) dx += 1;
+        if (movementKeys.has("arrowup") || movementKeys.has("w")) dy -= 1;
+        if (movementKeys.has("arrowdown") || movementKeys.has("s")) dy += 1;
+
+        const moving = Boolean(dx || dy);
+        player.classList.toggle("is-walking", moving);
+
+        if (moving) {
+          const length = Math.hypot(dx, dy) || 1;
+          dx /= length;
+          dy /= length;
+          setDirection(dx, dy);
+          const bounds = SCENE_NAV[currentScene].bounds;
+          const stepX = dx * PLAYER_SPEED * elapsed;
+          const stepY = dy * PLAYER_SPEED * elapsed;
+          const nextX = Math.min(bounds.maxX, Math.max(bounds.minX, playerX + stepX));
+          const nextY = Math.min(bounds.maxY, Math.max(bounds.minY, playerY + stepY));
+          let moved = false;
+
+          if (canOccupy(nextX, playerY)) {
+            playerX = nextX;
+            moved = moved || Math.abs(stepX) > .01;
+          }
+          if (canOccupy(playerX, nextY)) {
+            playerY = nextY;
+            moved = moved || Math.abs(stepY) > .01;
+          }
+
+          if (!moved) {
+            player.classList.remove("is-walking");
+          }
+
+          renderPlayer();
+          checkSceneExit(now);
+        }
+
+        requestAnimationFrame(movePlayer);
+      }
+
+      function playDo() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+
+        audioContext ||= new AudioContextClass();
+        if (audioContext.state === "suspended") audioContext.resume();
+
+        const now = audioContext.currentTime;
+        const gain = audioContext.createGain();
+        const oscillator = audioContext.createOscillator();
+        oscillator.type = "triangle";
+        oscillator.frequency.setValueAtTime(261.63, now);
+        oscillator.detune.setValueAtTime(-2, now);
+        gain.gain.setValueAtTime(.0001, now);
+        gain.gain.exponentialRampToValueAtTime(.24, now + .015);
+        gain.gain.exponentialRampToValueAtTime(.075, now + .26);
+        gain.gain.exponentialRampToValueAtTime(.0001, now + .72);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(now);
+        oscillator.stop(now + .74);
+      }
+
+      function restartAnimation(element, className) {
+        element.classList.remove(className);
+        void element.offsetWidth;
+        element.classList.add(className);
+      }
+
+      function allCatalogAchievementsUnlocked() {
+        return ACHIEVEMENT_CATALOG.every(achievement =>
+          unlockedAchievements.has(achievement.key)
+        );
+      }
+
+      function showNextAchievement() {
+        if (achievementShowing || !achievementQueue.length) return;
+        achievementShowing = true;
+        achievementText.textContent = achievementQueue.shift();
+        const isFinalCatalogAchievement =
+          !completionDialogueShown &&
+          achievementQueue.length === 0 &&
+          allCatalogAchievementsUnlocked();
+        const toastDuration = isFinalCatalogAchievement ? 5200 : 3500;
+        const followupDelay = isFinalCatalogAchievement ? 1200 : 180;
+        restartAnimation(achievementToast, "is-visible");
+        window.clearTimeout(achievementTimer);
+        achievementTimer = window.setTimeout(() => {
+          achievementToast.classList.remove("is-visible");
+          achievementShowing = false;
+          window.setTimeout(() => {
+            if (achievementQueue.length) {
+              showNextAchievement();
+            } else {
+              showCompletionDialogueIfReady();
+            }
+          }, followupDelay);
+        }, toastDuration);
+      }
+
+      function unlockAchievement(key, text) {
+        if (unlockedAchievements.has(key)) return;
+        unlockedAchievements.add(key);
+        achievementQueue.push(text);
+        showNextAchievement();
+      }
+
+      function showCompletionDialogueIfReady() {
+        if (!allCatalogAchievementsUnlocked() || completionDialogueShown) return;
+
+        completionDialogueShown = true;
+        manualBackdrop.classList.remove("is-open");
+        computerBackdrop.classList.remove("is-open");
+        scrollBackdrop.classList.remove("is-open");
+        achievementBoardBackdrop.classList.remove("is-open");
+        movementKeys.clear();
+        player?.classList.remove("is-walking");
+        dialogueName.textContent = "刘易斯";
+        dialoguePortraitImage.src = "editor/stardew-assets/0551-Solid-Gold-Lewis-23e39d7882.png";
+        dialoguePortraitImage.alt = "刘易斯雕像";
+        dialogueText.textContent = COMPLETION_DIALOGUE;
+        characterDialogue.classList.add("is-open");
+        dialogueClose.focus({ preventScroll: true });
+      }
+
+      function renderAchievementBoard() {
+        achievementList.replaceChildren();
+        const unlockedCount = ACHIEVEMENT_CATALOG.filter(item => unlockedAchievements.has(item.key)).length;
+        achievementProgress.textContent = `${unlockedCount} / ${ACHIEVEMENT_CATALOG.length}`;
+
+        ACHIEVEMENT_CATALOG.forEach((achievement, index) => {
+          const unlocked = unlockedAchievements.has(achievement.key);
+          const row = document.createElement("article");
+          const star = document.createElement("span");
+          const copy = document.createElement("div");
+          const title = document.createElement("h2");
+          const method = document.createElement("p");
+          const columnIndex = index % 3;
+          const rowIndex = Math.floor(index / 3) % 4;
+
+          row.className = `achievement-entry ${unlocked ? "is-unlocked" : "is-locked"}`;
+          star.className = "catalog-star";
+          star.setAttribute("aria-hidden", "true");
+          if (unlocked) {
+            star.style.backgroundPosition = `${columnIndex * 50}% ${rowIndex * (100 / 3)}%`;
+          }
+          title.textContent = unlocked ? achievement.title : "???";
+          method.textContent = unlocked ? achievement.method : "???";
+          copy.append(title, method);
+          row.append(star, copy);
+          achievementList.append(row);
+        });
+      }
+
+      function openAchievementBoard(statue) {
+        lastFocusedObject = statue;
+        movementKeys.clear();
+        player?.classList.remove("is-walking");
+        renderAchievementBoard();
+        achievementBoardBackdrop.classList.add("is-open");
+        achievementBoardClose.focus({ preventScroll: true });
+      }
+
+      function closeAchievementBoard() {
+        achievementBoardBackdrop.classList.remove("is-open");
+        lastFocusedObject?.focus({ preventScroll: true });
+      }
+
+      function catchButterfly(butterfly) {
+        if (butterfly.classList.contains("is-collected")) return;
+        lastFocusedObject = butterfly;
+        butterfly.disabled = true;
+        restartAnimation(butterfly, "is-caught");
+        unlockAchievement("first-butterfly", "新成就：你也喜欢花吗");
+        window.setTimeout(() => {
+          butterfly.classList.add("is-collected");
+          butterfly.style.visibility = "hidden";
+        }, 620);
+      }
+
+      function playPiano(piano) {
+        lastFocusedObject = piano;
+        window.clearTimeout(pianoTimer);
+        playDo();
+        restartAnimation(piano, "is-playing");
+        pianoTimer = window.setTimeout(() => {
+          piano.classList.remove("is-playing");
+          openManual("piano");
+        }, 560);
+      }
+
+      function readBookcase(bookcase) {
+        lastFocusedObject = bookcase;
+        restartAnimation(bookcase, "is-reading");
+        window.setTimeout(() => bookcase.classList.remove("is-reading"), 380);
+        openManual("bookcase");
+      }
+
+      function inspectObject(element, type) {
+        lastFocusedObject = element;
+        restartAnimation(element, "is-interacting");
+        window.setTimeout(() => {
+          element.classList.remove("is-interacting");
+          openManual(type);
+        }, 430);
+      }
+
+      function petDog(dog) {
+        const heart = scene.querySelector(`[data-object-id="${FARM_HEART_ID}"]`);
+        lastFocusedObject = dog;
+        window.clearTimeout(dogTimer);
+        restartAnimation(dog, "is-loved");
+
+        if (heart) {
+          heart.style.opacity = "1";
+          restartAnimation(heart, "is-visible");
+        }
+
+        dogTimer = window.setTimeout(() => {
+          dog.classList.remove("is-loved");
+          heart?.classList.remove("is-visible");
+          if (heart) heart.style.opacity = "0";
+          openManual("dog");
+        }, 760);
+      }
+
+      function petCat(cat) {
+        const heart = scene.querySelector(`[data-object-id="${BEDROOM_HEART_ID}"]`);
+        lastFocusedObject = cat;
+        window.clearTimeout(catTimer);
+        restartAnimation(cat, "is-loved");
+
+        if (heart) {
+          heart.style.opacity = "1";
+          restartAnimation(heart, "is-visible");
+        }
+
+        catTimer = window.setTimeout(() => {
+          cat.classList.remove("is-loved");
+          heart?.classList.remove("is-visible");
+          if (heart) heart.style.opacity = "0";
+          openManual("cat");
+        }, 900);
+      }
+
+      function showRachelDialogue(message) {
+        let nextMessage = message;
+        if (!nextMessage) {
+          let nextIndex = Math.floor(Math.random() * RACHEL_DIALOGUES.length);
+          if (nextIndex === lastDialogueIndex) {
+            nextIndex = (nextIndex + 1) % RACHEL_DIALOGUES.length;
+          }
+          lastDialogueIndex = nextIndex;
+          nextMessage = RACHEL_DIALOGUES[nextIndex];
+        }
+
+        movementKeys.clear();
+        player?.classList.remove("is-walking");
+        dialogueName.textContent = "瑞秋";
+        dialoguePortraitImage.src = "editor/stardew-assets/2473-Haley-38213afe09.png";
+        dialoguePortraitImage.alt = "瑞秋";
+        dialogueText.textContent = nextMessage;
+        characterDialogue.classList.add("is-open");
+        dialogueClose.focus({ preventScroll: true });
+      }
+
+      function closeRachelDialogue() {
+        characterDialogue.classList.remove("is-open");
+        scene.focus({ preventScroll: true });
+      }
+
+      function renderScrollPage(animate = false) {
+        scrollCopy.textContent = SCROLL_PAGES[scrollPage];
+        scrollPageNumber.textContent = `${String(scrollPage + 1).padStart(2, "0")} / ${String(SCROLL_PAGES.length).padStart(2, "0")}`;
+        scrollPrev.disabled = scrollPage === 0;
+        scrollNext.disabled = scrollPage === SCROLL_PAGES.length - 1;
+        if (animate) restartAnimation(scrollSheet, "is-turning");
+      }
+
+      function openScroll(scrollObject) {
+        lastFocusedObject = scrollObject;
+        movementKeys.clear();
+        player?.classList.remove("is-walking");
+        restartAnimation(scrollObject, "is-interacting");
+        window.setTimeout(() => {
+          scrollObject.classList.remove("is-interacting");
+          scrollPage = 0;
+          renderScrollPage();
+          scrollBackdrop.classList.add("is-open");
+          scrollNext.focus({ preventScroll: true });
+        }, 430);
+      }
+
+      function changeScrollPage(direction) {
+        const nextPage = Math.max(0, Math.min(SCROLL_PAGES.length - 1, scrollPage + direction));
+        if (nextPage === scrollPage) return;
+        scrollPage = nextPage;
+        renderScrollPage(true);
+      }
+
+      function closeScroll() {
+        scrollBackdrop.classList.remove("is-open");
+        lastFocusedObject?.focus({ preventScroll: true });
+      }
+
+      function renderAIProjects() {
+        if (aiProjectList.childElementCount) return;
+        AI_PROJECTS.forEach((project, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "project-row";
+          button.innerHTML = `
+            <span class="project-index">${String(index + 1).padStart(2, "0")}</span>
+            <span class="project-name"></span>
+            <span class="project-meta"></span>
+          `;
+          button.querySelector(".project-name").textContent = project.title;
+          button.querySelector(".project-meta").textContent = project.meta;
+          button.addEventListener("click", () => openComputerProject(index));
+          aiProjectList.append(button);
+        });
+      }
+
+      function renderGameLibrary() {
+        if (gameCardList.childElementCount) return;
+        GAME_LIBRARY.forEach((game, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "game-card";
+          button.innerHTML = `
+            <span class="game-mark" aria-hidden="true"></span>
+            <span>
+              <strong></strong>
+              <small></small>
+            </span>
+          `;
+          button.querySelector(".game-mark").textContent = game.icon;
+          button.querySelector("strong").textContent = game.title;
+          button.querySelector("small").textContent = game.meta;
+          button.addEventListener("click", () => openGameDetail(index));
+          gameCardList.append(button);
+        });
+      }
+
+      function showComputerHome() {
+        computerHome.hidden = false;
+        computerDetail.hidden = true;
+        computerFileOverview.hidden = false;
+        computerProjectDetail.hidden = true;
+        computerResumePreview.hidden = true;
+        computerPreviewButton.hidden = true;
+        aiProjectList.hidden = true;
+        gameLibrary.hidden = true;
+        computerBack.dataset.destination = "desktop";
+        computerBack.textContent = "← 返回桌面";
+      }
+
+      function openComputer(computer) {
+        lastFocusedObject = computer;
+        movementKeys.clear();
+        player?.classList.remove("is-walking");
+        restartAnimation(computer, "is-interacting");
+        window.setTimeout(() => {
+          computer.classList.remove("is-interacting");
+          showComputerHome();
+          computerBackdrop.classList.add("is-open");
+          computerHome.querySelector(".desktop-file")?.focus({ preventScroll: true });
+        }, 430);
+      }
+
+      function openComputerFile(key) {
+        const file = COMPUTER_FILES[key];
+        if (!file) return;
+        computerFileTitle.textContent = file.title;
+        computerFileCopy.textContent = file.copy;
+        computerFileOverview.hidden = false;
+        computerProjectDetail.hidden = true;
+        computerResumePreview.hidden = true;
+        computerPreviewButton.hidden = key !== "resume";
+        aiProjectList.hidden = key !== "ai";
+        gameLibrary.hidden = key !== "games";
+        if (key === "ai") renderAIProjects();
+        if (key === "games") renderGameLibrary();
+        computerHome.hidden = true;
+        computerDetail.hidden = false;
+        computerBack.dataset.destination = "desktop";
+        computerBack.textContent = "← 返回桌面";
+        computerBack.focus({ preventScroll: true });
+      }
+
+      function openComputerProject(index) {
+        const project = AI_PROJECTS[index];
+        if (!project) return;
+        computerProjectTitle.textContent = project.title;
+        computerProjectMeta.textContent = project.meta;
+        computerProjectCopy.textContent = project.body;
+        computerFileOverview.hidden = true;
+        computerProjectDetail.hidden = false;
+        computerResumePreview.hidden = true;
+        computerBack.dataset.destination = "projects";
+        computerBack.textContent = "← 返回项目";
+        computerBack.focus({ preventScroll: true });
+      }
+
+      function openGameDetail(index) {
+        const game = GAME_LIBRARY[index];
+        if (!game) return;
+        computerProjectTitle.textContent = game.title;
+        computerProjectMeta.textContent = game.meta;
+        computerProjectCopy.textContent = game.body;
+        computerFileOverview.hidden = true;
+        computerProjectDetail.hidden = false;
+        computerResumePreview.hidden = true;
+        computerBack.dataset.destination = "games";
+        computerBack.textContent = "← 返回游戏库";
+        computerBack.focus({ preventScroll: true });
+      }
+
+      function openResumePreview() {
+        computerFileOverview.hidden = true;
+        computerProjectDetail.hidden = true;
+        computerResumePreview.hidden = false;
+        computerBack.dataset.destination = "resume";
+        computerBack.textContent = "← 返回简历";
+        unlockAchievement("resume-prank", "新成就：你被骗啦！");
+        computerBack.focus({ preventScroll: true });
+      }
+
+      function handleComputerBack() {
+        if (computerBack.dataset.destination === "projects") {
+          openComputerFile("ai");
+          aiProjectList.querySelector(".project-row")?.focus({ preventScroll: true });
+        } else if (computerBack.dataset.destination === "games") {
+          openComputerFile("games");
+          gameCardList.querySelector(".game-card")?.focus({ preventScroll: true });
+        } else if (computerBack.dataset.destination === "resume") {
+          openComputerFile("resume");
+          computerPreviewButton.focus({ preventScroll: true });
+        } else {
+          showComputerHome();
+          computerHome.querySelector(".desktop-file")?.focus({ preventScroll: true });
+        }
+      }
+
+      function closeComputer() {
+        computerBackdrop.classList.remove("is-open");
+        showComputerHome();
+        lastFocusedObject?.focus({ preventScroll: true });
+      }
+
+      function openManual(type) {
+        const manual = manuals[type];
+        manualTitle.textContent = manual.title;
+        manualBody.textContent = manual.body;
+        manualBackdrop.classList.add("is-open");
+        manualClose.focus();
+      }
+
+      function closeManual() {
+        manualBackdrop.classList.remove("is-open");
+        lastFocusedObject?.focus();
+      }
+
+      titleScreen.addEventListener("click", () => {
+        backgroundMusic.volume = .25;
+        backgroundMusic.play().catch(() => {});
+
+        if (!titleAssembled) {
+          titleAssembled = true;
+          titleScreen.classList.add("is-assembling");
+          titleScreen.setAttribute("aria-label", "标题正在展开");
+          const introDuration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 50 : 3050;
+          window.setTimeout(() => {
+            titleReady = true;
+            titleScreen.setAttribute("aria-label", "开始探索星曌谷物语");
+          }, introDuration);
+          return;
+        }
+
+        if (!titleReady) return;
+        titleScreen.classList.add("is-hidden");
+        game.classList.add("is-ready");
+        window.setTimeout(() => {
+          titleScreen.remove();
+          showRachelDialogue(INTRO_DIALOGUE);
+        }, 460);
+      });
+
+      dialogueClose.addEventListener("click", closeRachelDialogue);
+      computerClose.addEventListener("click", closeComputer);
+      computerBack.addEventListener("click", handleComputerBack);
+      computerPreviewButton.addEventListener("click", openResumePreview);
+      computerBackdrop.addEventListener("click", event => {
+        if (event.target === computerBackdrop) closeComputer();
+      });
+      document.querySelectorAll("[data-computer-file]").forEach(button => {
+        button.addEventListener("click", () => openComputerFile(button.dataset.computerFile));
+      });
+      scrollClose.addEventListener("click", closeScroll);
+      scrollPrev.addEventListener("click", () => changeScrollPage(-1));
+      scrollNext.addEventListener("click", () => changeScrollPage(1));
+      scrollBackdrop.addEventListener("click", event => {
+        if (event.target === scrollBackdrop) closeScroll();
+      });
+      achievementBoardClose.addEventListener("click", closeAchievementBoard);
+      achievementBoardBackdrop.addEventListener("click", event => {
+        if (event.target === achievementBoardBackdrop) closeAchievementBoard();
+      });
+      manualClose.addEventListener("click", closeManual);
+      manualBackdrop.addEventListener("click", event => {
+        if (event.target === manualBackdrop) closeManual();
+      });
+      document.addEventListener("keydown", event => {
+        const dialogueIsOpen = characterDialogue.classList.contains("is-open");
+        const computerIsOpen = computerBackdrop.classList.contains("is-open");
+        const scrollIsOpen = scrollBackdrop.classList.contains("is-open");
+        const achievementBoardIsOpen = achievementBoardBackdrop.classList.contains("is-open");
+        if (event.key === "Escape" && achievementBoardIsOpen) {
+          closeAchievementBoard();
+          return;
+        }
+
+        if (event.key === "Escape" && scrollIsOpen) {
+          closeScroll();
+          return;
+        }
+
+        if (scrollIsOpen && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+          event.preventDefault();
+          changeScrollPage(event.key === "ArrowLeft" ? -1 : 1);
+          return;
+        }
+
+        if (event.key === "Escape" && computerIsOpen) {
+          closeComputer();
+          return;
+        }
+
+        if (event.key === "Escape" && dialogueIsOpen) {
+          closeRachelDialogue();
+          return;
+        }
+
+        if (event.key === "Escape" && manualBackdrop.classList.contains("is-open")) {
+          closeManual();
+          return;
+        }
+
+        const key = event.key.toLowerCase();
+        if ((event.code === "Space" || key === " ") && dialogueIsOpen) {
+          event.preventDefault();
+          if (!event.repeat) closeRachelDialogue();
+          return;
+        }
+
+        const canControl =
+          !document.querySelector(".title-screen") &&
+          !manualBackdrop.classList.contains("is-open") &&
+          !dialogueIsOpen &&
+          !computerIsOpen &&
+          !scrollIsOpen &&
+          !achievementBoardIsOpen;
+
+        if ((event.code === "Space" || key === " ") && canControl) {
+          event.preventDefault();
+          if (!event.repeat) interactWithNearestObject();
+          return;
+        }
+
+        if (
+          ["arrowleft", "arrowright", "arrowup", "arrowdown", "w", "a", "s", "d"].includes(key) &&
+          canControl
+        ) {
+          event.preventDefault();
+          movementKeys.add(key);
+        }
+      });
+      document.addEventListener("keyup", event => {
+        movementKeys.delete(event.key.toLowerCase());
+      });
+      window.addEventListener("blur", () => movementKeys.clear());
+      window.addEventListener("resize", fitScene);
+
+      fitScene();
+      loadScene();
+      requestAnimationFrame(movePlayer);
+    })();
+  </script>
+</body>
+</html>
