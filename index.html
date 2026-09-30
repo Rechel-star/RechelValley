@@ -126,6 +126,94 @@
       transform: scale(1);
     }
 
+    .mobile-controls {
+      position: fixed;
+      inset: auto 0 0;
+      z-index: 85;
+      display: none;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding:
+        0 max(18px, env(safe-area-inset-right))
+        max(18px, env(safe-area-inset-bottom))
+        max(18px, env(safe-area-inset-left));
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 220ms ease;
+    }
+
+    .virtual-joystick,
+    .mobile-action {
+      position: relative;
+      margin: 0;
+      padding: 0;
+      border: 5px solid #3e2030;
+      border-radius: 50%;
+      color: #fff0bd;
+      background: rgba(184, 113, 57, .86);
+      box-shadow:
+        inset 0 0 0 4px rgba(255, 211, 93, .35),
+        5px 6px 0 rgba(30, 15, 25, .42);
+      touch-action: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .virtual-joystick {
+      width: 112px;
+      height: 112px;
+      background:
+        linear-gradient(90deg, transparent 47%, rgba(62, 32, 48, .28) 47% 53%, transparent 53%),
+        linear-gradient(transparent 47%, rgba(62, 32, 48, .28) 47% 53%, transparent 53%),
+        rgba(184, 113, 57, .86);
+    }
+
+    .joystick-thumb {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 46px;
+      height: 46px;
+      border: 4px solid #3e2030;
+      border-radius: 50%;
+      background: #ffd35d;
+      box-shadow: inset 0 0 0 4px #e89b3c;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    .virtual-joystick.is-active {
+      background-color: rgba(145, 78, 40, .92);
+    }
+
+    .mobile-action {
+      display: grid;
+      width: 74px;
+      height: 74px;
+      place-items: center;
+      background: rgba(181, 67, 58, .9);
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+      text-shadow: 2px 2px 0 #7a3f25;
+      touch-action: manipulation;
+    }
+
+    .mobile-action:active,
+    .mobile-action.is-active {
+      box-shadow:
+        inset 0 0 0 4px rgba(255, 211, 93, .28),
+        2px 3px 0 rgba(30, 15, 25, .42);
+      transform: translate(3px, 3px);
+    }
+
+    .virtual-joystick:focus-visible,
+    .mobile-action:focus-visible {
+      outline: 3px solid #fff0bd;
+      outline-offset: 3px;
+    }
+
     .scene-shell {
       position: relative;
       overflow: hidden;
@@ -1626,6 +1714,45 @@
       100% { opacity: 1; }
     }
 
+    @media (hover: none) and (pointer: coarse), (max-width: 900px) {
+      .mobile-controls { display: flex; }
+      .game.is-ready ~ .mobile-controls { opacity: 1; }
+      .game.is-ready ~ .mobile-controls .virtual-joystick,
+      .game.is-ready ~ .mobile-controls .mobile-action {
+        pointer-events: auto;
+      }
+      body:has(.character-dialogue.is-open) .virtual-joystick {
+        opacity: .35;
+        pointer-events: none !important;
+      }
+      body:has(.manual-backdrop.is-open) .mobile-controls,
+      body:has(.computer-backdrop.is-open) .mobile-controls,
+      body:has(.scroll-backdrop.is-open) .mobile-controls,
+      body:has(.achievement-board-backdrop.is-open) .mobile-controls {
+        opacity: 0;
+        pointer-events: none;
+      }
+    }
+
+    @media (max-height: 500px) and (orientation: landscape) {
+      .mobile-controls {
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+      }
+      .virtual-joystick {
+        width: 94px;
+        height: 94px;
+      }
+      .joystick-thumb {
+        width: 40px;
+        height: 40px;
+      }
+      .mobile-action {
+        width: 66px;
+        height: 66px;
+        font-size: 24px;
+      }
+    }
+
     @media (max-width: 560px) {
       .game { padding: 8px; }
       .character-dialogue {
@@ -1744,6 +1871,15 @@
       <div class="scene" id="scene" tabindex="0" aria-live="polite"></div>
     </div>
   </main>
+
+  <div class="mobile-controls" id="mobileControls" aria-label="移动端游戏控制">
+    <button class="virtual-joystick" id="virtualJoystick" type="button" aria-label="移动摇杆">
+      <span class="joystick-thumb" id="joystickThumb" aria-hidden="true"></span>
+    </button>
+    <button class="mobile-action" id="mobileAction" type="button" aria-label="互动">
+      <span aria-hidden="true">A</span>
+    </button>
+  </div>
 
   <div class="achievement-toast" id="achievementToast" role="status" aria-live="polite">
     <span class="achievement-star" aria-hidden="true">★</span>
@@ -2024,6 +2160,9 @@
       const achievementProgress = document.querySelector("#achievementProgress");
       const achievementList = document.querySelector("#achievementList");
       const loadError = document.querySelector("#loadError");
+      const virtualJoystick = document.querySelector("#virtualJoystick");
+      const joystickThumb = document.querySelector("#joystickThumb");
+      const mobileAction = document.querySelector("#mobileAction");
       let lastFocusedObject = null;
       let pianoTimer = null;
       let dogTimer = null;
@@ -2047,6 +2186,8 @@
       const unlockedAchievements = new Set();
       localStorage.removeItem("xingzhaogu-achievements");
       const movementKeys = new Set();
+      const virtualMovementKeys = new Set();
+      let virtualJoystickPointerId = null;
       const ACHIEVEMENT_CATALOG = [
         { key: "scroll", title: "欢迎光临", method: "展开床头卷轴" },
         { key: "piano", title: "第四页", method: "掀开琴盖" },
@@ -2549,12 +2690,28 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
         }
       }
 
+      function resetVirtualJoystick() {
+        const pointerId = virtualJoystickPointerId;
+        virtualJoystickPointerId = null;
+        virtualMovementKeys.clear();
+        virtualJoystick.classList.remove("is-active");
+        joystickThumb.style.transform = "translate(-50%, -50%)";
+        if (pointerId !== null && virtualJoystick.hasPointerCapture?.(pointerId)) {
+          virtualJoystick.releasePointerCapture(pointerId);
+        }
+      }
+
+      function clearMovementInput() {
+        movementKeys.clear();
+        resetVirtualJoystick();
+      }
+
       function switchScene(sceneKey) {
         if (sceneBusy || sceneKey === currentScene) return;
         const fromScene = currentScene;
         sceneBusy = true;
         lastFocusedObject = null;
-        movementKeys.clear();
+        clearMovementInput();
         loadScene(sceneKey, true, fromScene);
       }
 
@@ -2583,6 +2740,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
 
       function attemptInteraction(element, action) {
         if (!element.classList.contains("is-near") || sceneBusy) return;
+        clearMovementInput();
         player?.classList.remove("is-walking");
         action(element);
         const achievement = INTERACTION_ACHIEVEMENTS[element.dataset.interaction];
@@ -2691,10 +2849,10 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
 
         let dx = 0;
         let dy = 0;
-        if (movementKeys.has("arrowleft") || movementKeys.has("a")) dx -= 1;
-        if (movementKeys.has("arrowright") || movementKeys.has("d")) dx += 1;
-        if (movementKeys.has("arrowup") || movementKeys.has("w")) dy -= 1;
-        if (movementKeys.has("arrowdown") || movementKeys.has("s")) dy += 1;
+        if (movementKeys.has("arrowleft") || movementKeys.has("a") || virtualMovementKeys.has("arrowleft")) dx -= 1;
+        if (movementKeys.has("arrowright") || movementKeys.has("d") || virtualMovementKeys.has("arrowright")) dx += 1;
+        if (movementKeys.has("arrowup") || movementKeys.has("w") || virtualMovementKeys.has("arrowup")) dy -= 1;
+        if (movementKeys.has("arrowdown") || movementKeys.has("s") || virtualMovementKeys.has("arrowdown")) dy += 1;
 
         const moving = Boolean(dx || dy);
         player.classList.toggle("is-walking", moving);
@@ -2806,7 +2964,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
         computerBackdrop.classList.remove("is-open");
         scrollBackdrop.classList.remove("is-open");
         achievementBoardBackdrop.classList.remove("is-open");
-        movementKeys.clear();
+        clearMovementInput();
         player?.classList.remove("is-walking");
         dialogueName.textContent = "刘易斯";
         dialoguePortraitImage.src = "editor/stardew-assets/0551-Solid-Gold-Lewis-23e39d7882.png";
@@ -2847,7 +3005,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
 
       function openAchievementBoard(statue) {
         lastFocusedObject = statue;
-        movementKeys.clear();
+        clearMovementInput();
         player?.classList.remove("is-walking");
         renderAchievementBoard();
         achievementBoardBackdrop.classList.add("is-open");
@@ -2947,7 +3105,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
           nextMessage = RACHEL_DIALOGUES[nextIndex];
         }
 
-        movementKeys.clear();
+        clearMovementInput();
         player?.classList.remove("is-walking");
         dialogueName.textContent = "瑞秋";
         dialoguePortraitImage.src = "editor/stardew-assets/2473-Haley-38213afe09.png";
@@ -2972,7 +3130,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
 
       function openScroll(scrollObject) {
         lastFocusedObject = scrollObject;
-        movementKeys.clear();
+        clearMovementInput();
         player?.classList.remove("is-walking");
         restartAnimation(scrollObject, "is-interacting");
         window.setTimeout(() => {
@@ -3050,7 +3208,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
 
       function openComputer(computer) {
         lastFocusedObject = computer;
-        movementKeys.clear();
+        clearMovementInput();
         player?.classList.remove("is-walking");
         restartAnimation(computer, "is-interacting");
         window.setTimeout(() => {
@@ -3154,6 +3312,67 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
         lastFocusedObject?.focus();
       }
 
+      function playerCanMove() {
+        return (
+          !document.querySelector(".title-screen") &&
+          !manualBackdrop.classList.contains("is-open") &&
+          !characterDialogue.classList.contains("is-open") &&
+          !computerBackdrop.classList.contains("is-open") &&
+          !scrollBackdrop.classList.contains("is-open") &&
+          !achievementBoardBackdrop.classList.contains("is-open")
+        );
+      }
+
+      function updateVirtualJoystick(event) {
+        if (event.pointerId !== virtualJoystickPointerId) return;
+        const bounds = virtualJoystick.getBoundingClientRect();
+        const offsetX = event.clientX - (bounds.left + bounds.width / 2);
+        const offsetY = event.clientY - (bounds.top + bounds.height / 2);
+        const distance = Math.hypot(offsetX, offsetY);
+        const maxOffset = bounds.width * .28;
+        const scale = distance > maxOffset ? maxOffset / distance : 1;
+        const thumbX = offsetX * scale;
+        const thumbY = offsetY * scale;
+        const deadZone = bounds.width * .1;
+
+        joystickThumb.style.transform =
+          `translate(calc(-50% + ${thumbX}px), calc(-50% + ${thumbY}px))`;
+        virtualMovementKeys.clear();
+        if (offsetX < -deadZone) virtualMovementKeys.add("arrowleft");
+        if (offsetX > deadZone) virtualMovementKeys.add("arrowright");
+        if (offsetY < -deadZone) virtualMovementKeys.add("arrowup");
+        if (offsetY > deadZone) virtualMovementKeys.add("arrowdown");
+      }
+
+      function beginVirtualJoystick(event) {
+        if (!playerCanMove() || virtualJoystickPointerId !== null) return;
+        event.preventDefault();
+        virtualJoystickPointerId = event.pointerId;
+        virtualJoystick.setPointerCapture(event.pointerId);
+        virtualJoystick.classList.add("is-active");
+        updateVirtualJoystick(event);
+      }
+
+      function moveVirtualJoystick(event) {
+        if (event.pointerId !== virtualJoystickPointerId) return;
+        event.preventDefault();
+        updateVirtualJoystick(event);
+      }
+
+      function endVirtualJoystick(event) {
+        if (event.pointerId !== virtualJoystickPointerId) return;
+        event.preventDefault();
+        resetVirtualJoystick();
+      }
+
+      function useMobileAction() {
+        if (characterDialogue.classList.contains("is-open")) {
+          closeRachelDialogue();
+          return;
+        }
+        if (playerCanMove()) interactWithNearestObject();
+      }
+
       titleScreen.addEventListener("click", () => {
         backgroundMusic.volume = .25;
         backgroundMusic.play().catch(() => {});
@@ -3203,6 +3422,21 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
       manualBackdrop.addEventListener("click", event => {
         if (event.target === manualBackdrop) closeManual();
       });
+      virtualJoystick.addEventListener("pointerdown", beginVirtualJoystick);
+      virtualJoystick.addEventListener("pointermove", moveVirtualJoystick);
+      virtualJoystick.addEventListener("pointerup", endVirtualJoystick);
+      virtualJoystick.addEventListener("pointercancel", endVirtualJoystick);
+      virtualJoystick.addEventListener("lostpointercapture", resetVirtualJoystick);
+      virtualJoystick.addEventListener("click", event => event.preventDefault());
+      mobileAction.addEventListener("pointerdown", event => {
+        mobileAction.classList.add("is-active");
+      });
+      mobileAction.addEventListener("pointerup", () => mobileAction.classList.remove("is-active"));
+      mobileAction.addEventListener("pointercancel", () => mobileAction.classList.remove("is-active"));
+      mobileAction.addEventListener("click", event => {
+        event.preventDefault();
+        useMobileAction();
+      });
       document.addEventListener("keydown", event => {
         const dialogueIsOpen = characterDialogue.classList.contains("is-open");
         const computerIsOpen = computerBackdrop.classList.contains("is-open");
@@ -3246,13 +3480,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
           return;
         }
 
-        const canControl =
-          !document.querySelector(".title-screen") &&
-          !manualBackdrop.classList.contains("is-open") &&
-          !dialogueIsOpen &&
-          !computerIsOpen &&
-          !scrollIsOpen &&
-          !achievementBoardIsOpen;
+        const canControl = playerCanMove();
 
         if ((event.code === "Space" || key === " ") && canControl) {
           event.preventDefault();
@@ -3271,7 +3499,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
       document.addEventListener("keyup", event => {
         movementKeys.delete(event.key.toLowerCase());
       });
-      window.addEventListener("blur", () => movementKeys.clear());
+      window.addEventListener("blur", clearMovementInput);
       window.addEventListener("resize", fitScene);
 
       fitScene();
