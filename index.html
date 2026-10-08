@@ -110,6 +110,59 @@
       pointer-events: none;
     }
 
+    .title-sound {
+      position: fixed;
+      z-index: 101;
+      top: calc((100vh - min(56.264vw, 100vh)) / 2 + min(2.86vw, 5.08vh) - 24px);
+      left: calc((100vw - min(100vw, 177.734vh)) / 2 + min(2.84vw, 5.05vh) - 24px);
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      cursor: pointer;
+      color: transparent;
+      background: transparent;
+      border: 0;
+      transform: translateY(-110vh);
+      transition: opacity 220ms ease, visibility 220ms;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .title-screen.is-assembling + .title-sound {
+      animation: sound-control-drop 3s cubic-bezier(.18, .76, .2, 1) both;
+    }
+
+    .title-sound:hover,
+    .title-sound:focus-visible {
+      background: rgba(255, 240, 189, .2);
+      outline: 3px solid var(--gold);
+      outline-offset: 2px;
+      box-shadow: 3px 3px 0 rgba(62, 32, 48, .55);
+    }
+
+    .title-sound::after {
+      content: "";
+      position: absolute;
+      top: 5px;
+      left: 22px;
+      width: 5px;
+      height: 38px;
+      pointer-events: none;
+      background: #a93935;
+      box-shadow: 2px 2px 0 var(--wood-dark);
+      opacity: 0;
+      transform: rotate(-42deg);
+    }
+
+    .title-sound.is-muted::after {
+      opacity: 1;
+    }
+
+    .title-sound.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
     .game {
       position: fixed;
       inset: 0;
@@ -262,6 +315,67 @@
 
     .scene-object.interactive.is-near {
       cursor: pointer;
+    }
+
+    .scene-object.combo-hint .object-img {
+      animation: combo-hint 2.2s steps(6, end) infinite;
+    }
+
+    body.is-night {
+      background:
+        linear-gradient(rgba(9, 18, 42, .7), rgba(20, 10, 35, .9)),
+        repeating-linear-gradient(90deg, #16273a 0 28px, #1d3044 28px 56px);
+    }
+
+    body.is-night .scene-shell {
+      filter:
+        drop-shadow(0 18px 30px rgba(5, 7, 22, .68))
+        sepia(.08) saturate(.85);
+    }
+
+    body.is-night .scene::after {
+      content: "";
+      position: absolute;
+      z-index: 850;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 56% 37%, rgba(255, 190, 91, .2), transparent 22%),
+        rgba(12, 27, 67, .42);
+      mix-blend-mode: multiply;
+    }
+
+    body.is-night .player-character,
+    body.is-night .scene-object.interactive {
+      z-index: 900 !important;
+    }
+
+    body.is-night .night-bed-toy {
+      z-index: 899 !important;
+      filter: drop-shadow(0 0 7px rgba(255, 202, 103, .65));
+    }
+
+    body.is-night .scene-night-window {
+      position: absolute;
+      z-index: 849;
+      left: 486px;
+      top: 93px;
+      width: 28px;
+      height: 61px;
+      pointer-events: none;
+      background: rgba(111, 154, 220, .48);
+      box-shadow: 0 0 14px rgba(123, 171, 235, .55);
+      mix-blend-mode: screen;
+    }
+
+    body.is-entering-night::before {
+      content: "";
+      position: fixed;
+      z-index: 110;
+      inset: 0;
+      pointer-events: none;
+      background: #14244d;
+      animation: night-fall 4s ease-in-out both;
     }
 
     .object-img {
@@ -773,6 +887,39 @@
       letter-spacing: 0;
       white-space: pre-line;
       text-shadow: 1px 1px 0 rgba(255, 231, 170, .75);
+    }
+
+    .dialogue-options {
+      display: grid;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .dialogue-options:empty { display: none; }
+
+    .dialogue-option,
+    .answer-option {
+      width: 100%;
+      cursor: pointer;
+      text-align: left;
+      letter-spacing: 0;
+    }
+
+    .dialogue-option {
+      padding: 9px 12px;
+      color: #4e291e;
+      background: #ffdc94;
+      border: 3px solid #7c3817;
+      box-shadow: inset 0 0 0 2px rgba(255, 244, 190, .7);
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .dialogue-option:hover,
+    .dialogue-option:focus-visible {
+      background: #fff0b5;
+      outline: 3px solid #fff4c7;
+      outline-offset: 2px;
     }
 
     .dialogue-portrait {
@@ -1499,8 +1646,7 @@
       width: min(520px, 100%);
       min-height: 260px;
       max-height: min(78vh, 680px);
-      overflow-y: auto;
-      padding: 34px 34px 30px;
+      overflow: hidden;
       color: var(--ink);
       background:
         repeating-linear-gradient(0deg, transparent 0 23px, rgba(116, 67, 40, .08) 23px 24px),
@@ -1516,6 +1662,13 @@
 
     .manual-backdrop.is-open .manual { transform: translateY(0) scale(1); }
 
+    .manual-content {
+      min-height: 260px;
+      max-height: min(78vh, 680px);
+      overflow-y: auto;
+      padding: 34px 34px 92px;
+    }
+
     .manual::before {
       content: "";
       position: absolute;
@@ -1524,7 +1677,7 @@
       pointer-events: none;
     }
 
-    .manual h1 {
+    .manual-content h1 {
       position: relative;
       margin: 0 44px 22px 0;
       color: var(--wood-dark);
@@ -1533,13 +1686,145 @@
       letter-spacing: 0;
     }
 
-    .manual p {
+    .manual-content p {
       position: relative;
       margin: 0;
       color: #65432f;
       font-size: 15px;
       line-height: 1.9;
       white-space: pre-line;
+    }
+
+    .manual-tail {
+      position: relative;
+      margin-top: 12px !important;
+      color: #4f2e25 !important;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.9;
+      white-space: pre-line;
+    }
+
+    .answer-toggle {
+      position: absolute;
+      z-index: 3;
+      right: 22px;
+      bottom: 20px;
+      min-height: 44px;
+      padding: 9px 16px;
+      cursor: pointer;
+      color: var(--paper);
+      background: #9d481e;
+      border: 3px solid var(--wood-dark);
+      box-shadow: inset 0 0 0 2px #d98738, 3px 3px 0 rgba(62, 32, 48, .3);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .answer-toggle:hover,
+    .answer-toggle:focus-visible {
+      background: #b85c27;
+      outline: 3px solid var(--gold);
+      outline-offset: 2px;
+    }
+
+    .answer-float {
+      position: absolute;
+      z-index: 5;
+      inset: 68px 18px 18px;
+      overflow-y: auto;
+      padding: 24px 22px 22px;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 23px, rgba(116, 67, 40, .08) 23px 24px),
+        #fff0bd;
+      border: 5px solid var(--wood);
+      box-shadow:
+        inset 0 0 0 3px var(--paper-dark),
+        7px 8px 0 rgba(35, 17, 34, .38);
+      animation: answer-float-in 180ms steps(3, end);
+    }
+
+    .answer-float[hidden],
+    .answer-toggle[hidden] {
+      display: none;
+    }
+
+    .answer-float h2 {
+      margin: 0 42px 8px 0;
+      color: var(--wood-dark);
+      font-size: 18px;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+
+    .answer-float-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      cursor: pointer;
+      color: var(--paper);
+      background: #b6403d;
+      border: 3px solid var(--wood-dark);
+      font-size: 19px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .answer-float-close:focus-visible {
+      outline: 3px solid var(--gold);
+      outline-offset: 2px;
+    }
+
+    .answer-options {
+      position: relative;
+      display: grid;
+      gap: 9px;
+      margin-top: 18px;
+    }
+
+    .answer-option {
+      min-height: 46px;
+      padding: 10px 12px;
+      color: #5b3427;
+      background: rgba(255, 220, 136, .62);
+      border: 3px solid var(--wood);
+      box-shadow: inset 0 0 0 2px rgba(255, 246, 196, .65);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.45;
+    }
+
+    .answer-option:hover,
+    .answer-option:focus-visible {
+      background: #ffe09a;
+      outline: 3px solid var(--gold);
+      outline-offset: 2px;
+    }
+
+    .answer-option:active { transform: translate(2px, 2px); }
+
+    .answer-history {
+      margin-top: 18px !important;
+      padding: 12px 14px;
+      color: #7a4d33 !important;
+      background: rgba(231, 191, 119, .38);
+      border-left: 4px solid var(--wood);
+      font-size: 13px !important;
+      line-height: 1.6 !important;
+    }
+
+    .answer-history[hidden],
+    .answer-options[hidden],
+    .manual-tail[hidden] {
+      display: none;
+    }
+
+    @keyframes answer-float-in {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
     }
 
     .manual-close {
@@ -1605,6 +1890,13 @@
       100% { transform: translateY(0); }
     }
 
+    @keyframes sound-control-drop {
+      0% { transform: translateY(-110vh); }
+      72% { transform: translateY(2px); }
+      86% { transform: translateY(-1px); }
+      100% { transform: translateY(0); }
+    }
+
     @keyframes enter-ready {
       0%, 94% { opacity: 0; }
       100% { opacity: 1; }
@@ -1619,6 +1911,18 @@
       0%, 100% { transform: translateY(0); filter: brightness(1); }
       35% { transform: translateY(-3px); filter: brightness(1.18); }
       70% { transform: translateY(1px); filter: brightness(1.05); }
+    }
+
+    @keyframes combo-hint {
+      0%, 100% { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+      50% { filter: brightness(1.18) drop-shadow(0 0 5px rgba(255, 211, 93, .82)); }
+    }
+
+    @keyframes night-fall {
+      0% { opacity: 0; }
+      45% { opacity: .74; }
+      78% { opacity: .95; }
+      100% { opacity: 0; }
     }
 
     @keyframes flower-sway {
@@ -1728,6 +2032,7 @@
       body:has(.manual-backdrop.is-open) .mobile-controls,
       body:has(.computer-backdrop.is-open) .mobile-controls,
       body:has(.scroll-backdrop.is-open) .mobile-controls,
+      body:has(.character-dialogue.is-open .dialogue-options:not(:empty)) .mobile-controls,
       body:has(.achievement-board-backdrop.is-open) .mobile-controls {
         opacity: 0;
         pointer-events: none;
@@ -1765,6 +2070,8 @@
         border-right-width: 5px;
       }
       .dialogue-copy p { font-size: 13px; line-height: 1.65; }
+      .dialogue-options { gap: 6px; margin-top: 12px; }
+      .dialogue-option { padding: 7px 9px; font-size: 11px; }
       .dialogue-portrait { padding: 10px 9px 34px; }
       .dialogue-portrait img { width: 86px; height: 86px; border-width: 4px; }
       .dialogue-name {
@@ -1841,9 +2148,14 @@
       .achievement-entry h2 { font-size: 16px; }
       .achievement-entry p { font-size: 12px; }
       .manual-backdrop { padding: 14px; }
-      .manual { min-height: 230px; padding: 30px 26px 24px; }
-      .manual h1 { font-size: 20px; }
-      .manual p { font-size: 14px; }
+      .manual { min-height: 230px; }
+      .manual-content { min-height: 230px; padding: 30px 26px 84px; }
+      .manual-content h1 { font-size: 20px; }
+      .manual-content p { font-size: 14px; }
+      .answer-toggle { right: 18px; bottom: 16px; }
+      .answer-float { inset: 58px 10px 10px; padding: 22px 16px 16px; }
+      .answer-float h2 { font-size: 16px; }
+      .answer-option { min-height: 44px; padding: 9px 10px; font-size: 12px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1865,6 +2177,7 @@
     <span class="title-sign title-sign-start" aria-hidden="true"></span>
     <span class="enter-mark" aria-hidden="true"></span>
   </button>
+  <button class="title-sound" id="titleSound" type="button" aria-label="静音" aria-pressed="false" title="静音"></button>
 
   <main class="game" id="game" aria-label="星曌谷物语客厅">
     <div class="scene-shell">
@@ -1900,6 +2213,7 @@
   <section class="character-dialogue" id="characterDialogue" role="dialog" aria-modal="true" aria-labelledby="dialogueName" aria-describedby="dialogueText">
     <div class="dialogue-copy">
       <p id="dialogueText"></p>
+      <div class="dialogue-options" id="dialogueOptions"></div>
       <button class="dialogue-close" id="dialogueClose" type="button" aria-label="关闭对话"></button>
     </div>
     <div class="dialogue-portrait">
@@ -1976,8 +2290,18 @@
   <div class="manual-backdrop" id="manualBackdrop" role="presentation">
     <section class="manual" role="dialog" aria-modal="true" aria-labelledby="manualTitle">
       <button class="manual-close" id="manualClose" type="button" aria-label="关闭说明书"></button>
-      <h1 id="manualTitle"></h1>
-      <p id="manualBody"></p>
+      <div class="manual-content" id="manualContent">
+        <h1 id="manualTitle"></h1>
+        <p id="manualBody"></p>
+      </div>
+      <button class="answer-toggle" id="answerToggle" type="button">回应瑞秋</button>
+      <section class="answer-float" id="answerFloat" aria-label="回应瑞秋" hidden>
+        <button class="answer-float-close" id="answerFloatClose" type="button" aria-label="收起回答">×</button>
+        <h2>回应瑞秋</h2>
+        <p class="manual-tail" id="manualTail"></p>
+        <div class="answer-options" id="answerOptions"></div>
+        <p class="answer-history" id="answerHistory" hidden></p>
+      </section>
     </section>
   </div>
 
@@ -1996,7 +2320,7 @@
           122: { key: "chest", label: "查看客厅的箱子" }
         },
         farm: {
-          2: { key: "shippingBox", label: "查看房子旁边的垃圾箱" },
+          2: { key: "storageBox", label: "查看房子旁边的收纳箱" },
           36: { key: "dog", label: "摸摸小狗并打开说明书", distance: 18 },
           37: { key: "butterfly", label: "捕捉蝴蝶", distance: 24 },
           38: { key: "butterfly", label: "捕捉蝴蝶", distance: 24 },
@@ -2025,6 +2349,22 @@
       const PLAYER_SPEED = 112;
       const INTERACTION_DISTANCE = 34;
       const ASSET_PREFIX = "editor/";
+      const EXTRA_SCENE_OBJECTS = {
+        farm: [
+          {
+            id: 56,
+            name: "Garbage Can",
+            x: 736,
+            y: 216,
+            width: 24,
+            height: 24,
+            z: 520,
+            opacity: 1,
+            src: "stardew-assets/0293-Garbage-Can-9dc9f05e7c.png"
+          }
+        ]
+      };
+      INTERACTION_CONFIG.farm[56] = { key: "garbage", label: "查看垃圾箱" };
       const SCENES = {
         living: {
           data: "scene-data/living-room.json",
@@ -2119,13 +2459,22 @@
       const scene = document.querySelector("#scene");
       const game = document.querySelector("#game");
       const titleScreen = document.querySelector("#titleScreen");
+      const titleSound = document.querySelector("#titleSound");
       const backgroundMusic = document.querySelector("#backgroundMusic");
       const manualBackdrop = document.querySelector("#manualBackdrop");
       const manualTitle = document.querySelector("#manualTitle");
       const manualBody = document.querySelector("#manualBody");
+      const manualContent = document.querySelector("#manualContent");
       const manualClose = document.querySelector("#manualClose");
+      const answerToggle = document.querySelector("#answerToggle");
+      const answerFloat = document.querySelector("#answerFloat");
+      const answerFloatClose = document.querySelector("#answerFloatClose");
+      const manualTail = document.querySelector("#manualTail");
+      const answerOptions = document.querySelector("#answerOptions");
+      const answerHistory = document.querySelector("#answerHistory");
       const characterDialogue = document.querySelector("#characterDialogue");
       const dialogueText = document.querySelector("#dialogueText");
+      const dialogueOptions = document.querySelector("#dialogueOptions");
       const dialogueName = document.querySelector("#dialogueName");
       const dialoguePortraitImage = document.querySelector("#dialoguePortraitImage");
       const dialogueClose = document.querySelector("#dialogueClose");
@@ -2168,6 +2517,7 @@
       let dogTimer = null;
       let catTimer = null;
       let audioContext = null;
+      let soundMuted = false;
       let currentScene = "living";
       let sceneBusy = false;
       let player = null;
@@ -2179,12 +2529,47 @@
       let scrollPage = 0;
       let achievementTimer = null;
       let achievementShowing = false;
-      let completionDialogueShown = false;
+      let activeManualType = null;
+      let dialogueAfterClose = null;
+      let nightInviteShown = false;
       let titleAssembled = false;
       let titleReady = false;
       const achievementQueue = [];
-      const unlockedAchievements = new Set();
-      localStorage.removeItem("xingzhaogu-achievements");
+      [
+        "sdv_seen",
+        "sdv_order",
+        "sdv_combos",
+        "sdv_answers",
+        "sdv_profile",
+        "sdv_affection",
+        "sdv_rachel_talks",
+        "sdv_night",
+        "sdv_ending_choice",
+        "xingzhaogu-achievements"
+      ].forEach(key => localStorage.removeItem(key));
+      const readStoredJSON = (key, fallback) => {
+        try {
+          const value = JSON.parse(localStorage.getItem(key));
+          return value ?? fallback;
+        } catch {
+          return fallback;
+        }
+      };
+      const answers = readStoredJSON("sdv_answers", {});
+      const interactionOrder = readStoredJSON("sdv_order", []);
+      const completedCombos = new Set(readStoredJSON("sdv_combos", []));
+      const profileScores = {
+        creator: 0,
+        builder: 0,
+        guardian: 0,
+        ...readStoredJSON("sdv_profile", {})
+      };
+      let affection = Number(localStorage.getItem("sdv_affection")) || 0;
+      let rachelTalkCount = Number(localStorage.getItem("sdv_rachel_talks")) || 0;
+      let nightState = localStorage.getItem("sdv_night") === "true";
+      let endingChoice = localStorage.getItem("sdv_ending_choice") || "";
+      const unlockedAchievements = new Set(readStoredJSON("xingzhaogu-achievements", []));
+      document.body.classList.toggle("is-night", nightState);
       const movementKeys = new Set();
       const virtualMovementKeys = new Set();
       let virtualJoystickPointerId = null;
@@ -2201,9 +2586,15 @@
         { key: "garden-flower", title: "我记得浇水", method: "点开院子里的四株红花" },
         { key: "sunflower", title: "我就是太阳！", method: "点开向日葵" },
         { key: "carrot", title: "你也看到它了", method: "找到藏起来的胡萝卜" },
+        { key: "storage-box", title: "库存复核", method: "打开房子旁边的收纳箱" },
+        { key: "garbage", title: "情绪清运", method: "查看院子里的垃圾箱" },
         { key: "computer", title: "同一个人", method: "打开电脑桌面" },
         { key: "first-butterfly", title: "你也喜欢花吗", method: "抓到第一只蝴蝶" },
-        { key: "resume-prank", title: "你被骗啦！", method: "预览简历.pdf" }
+        { key: "resume-prank", title: "你被骗啦！", method: "预览简历.pdf" },
+        { key: "hidden-self", title: "遗落的自己", method: "找到并回应收纳箱背后的蓝色玩偶" },
+        { key: "combo-pianoScroll", title: "第四页之后", method: "按顺序查看钢琴与床头卷轴" },
+        { key: "combo-flowersCarrot", title: "没用的东西", method: "找到红花与胡萝卜之间的联系" },
+        { key: "combo-fullDay", title: "完整的一天", method: "按顺序查看咖啡、电脑与床" }
       ];
       const INTERACTION_ACHIEVEMENTS = {
         scroll: { key: "scroll", title: "欢迎光临" },
@@ -2218,16 +2609,13 @@
         redFlowers: { key: "garden-flower", title: "我记得浇水" },
         sunflower: { key: "sunflower", title: "我就是太阳！" },
         carrot: { key: "carrot", title: "你也看到它了" },
+        storageBox: { key: "storage-box", title: "库存复核" },
+        garbage: { key: "garbage", title: "情绪清运" },
         computer: { key: "computer", title: "同一个人" },
         blueToy: { key: "hidden-self", title: "遗落的自己", hidden: true }
       };
       const INTRO_DIALOGUE = `欢迎参观我的世界。有想了解的物品靠近点击空格即可；
 点击我也可以进行对话。还有一些彩蛋等你来发掘。`;
-      const COMPLETION_DIALOGUE = `你把我的房间翻遍了。
-
-说实话，我这个人不太指望被完整地理解。但你愿意花这个时间，那我也没什么好藏的了。
-
-谢谢你看到这里。——这句话我只写给走到这一步的人。`;
       const RACHEL_DIALOGUES = [
         "嘿。等一下，我看完这一行就理你。",
         "你要不要听我弹一段？就一小段。",
@@ -2245,6 +2633,159 @@
         "你说人为什么非要在二十几岁想清楚一生要做什么。想不清楚也很正常吧。",
         "今天学会了一个新东西。虽然很小，但是新的。"
       ];
+      const ANSWER_CONFIG = {
+        piano: {
+          tail: "反正琴还在。它没催我，我就先假装这件事不着急。",
+          options: [
+            ["我也有件一直说“以后再继续”的事。", "那我们先别问这个“以后”具体是哪天。", "creator", 1],
+            ["它没催你，但你明显还惦记着。", "……被你听出来了。很烦。", "guardian", 2],
+            ["要不现在弹两小节？两小节不算复出。", "你很会把大事骗成小事。好吧，两小节。", "builder", 2]
+          ]
+        },
+        bookcase: {
+          tail: "先声明，我猜错凶手的时候一般不会告诉别人。",
+          options: [
+            ["我猜错了也会坚持说作者写得不合理。", "很好。推理小说读者最后都会学会怪作者。", "creator", 1],
+            ["我会直接翻到最后一页。", "出去。书架不欢迎你。", "builder", 0],
+            ["我不猜，揭晓时负责装得很震惊。", "这个技能很实用，开会的时候也用得上。", "guardian", 1]
+          ]
+        },
+        chest: {
+          tail: "这些都没学会。扔了舍不得，摆出来又有点心虚。",
+          options: [
+            ["我家也有一个这样的箱子。", "每个人家里是不是都有一座小型烂尾楼。", "guardian", 1],
+            ["不会又怎样，喜欢过就算数。", "这句话不错。我先借走，不一定还。", "creator", 2],
+            ["打开看看，说不定还有一个能吹响。", "可以。但邻居敲门的话，你负责解释。", "builder", 1]
+          ]
+        },
+        meal: {
+          tail: "外卖最厉害的地方，是能让人吃完以后比吃之前更想家。",
+          options: [
+            ["有些味道确实复刻不出来。", "对。配料都对，吃起来还是像一道证词不足的仿品。", "creator", 1],
+            ["我想到家的时候，先想到的是人。", "也对。菜负责把人叫回来。", "guardian", 2],
+            ["先说哪一家最好吃，我比较实际。", "没有。真有的话，我就不会说这么多了。", "builder", 1]
+          ]
+        },
+        dog: {
+          tail: "它要是扑过来，你最好站稳。爱有时候挺重的。",
+          options: [
+            ["没关系，我接得住。", "它听见了。现在没有反悔的机会了。", "guardian", 2],
+            ["等一下，让我先把手机拿出来。", "你会得到四十张糊掉的照片。", "creator", 1],
+            ["我可以直接躺下，省得它扑。", "很熟练。看来不是第一次被狗袭击。", "builder", 1]
+          ]
+        },
+        cat: {
+          tail: "别期待太多。它今天连我都不怎么理。",
+          options: [
+            ["那我坐远一点，等它自己决定。", "这个答案它应该满意。虽然它不会承认。", "guardian", 2],
+            ["没关系，我擅长单方面喜欢。", "听起来有点可怜。但猫确实很吃这一套。", "creator", 1],
+            ["它是不是觉得我们两个有点吵？", "不是“有点”。它刚才已经翻白眼了。", "builder", 1]
+          ]
+        },
+        coffee: {
+          tail: "这杯已经凉了。我正在等它自己重新变热。",
+          options: [
+            ["这个技术目前可能还不成熟。", "那它凭什么叫人工智能时代。", "builder", 1],
+            ["别喝了，我陪你重新泡一杯。", "可以。上一杯的失败我们就当没发生。", "guardian", 2],
+            ["凉咖啡也是咖啡。闭眼吧。", "你很适合跟现在的我一起生活。", "creator", 2]
+          ]
+        },
+        garbage: {
+          tail: "它知道的事情很多。好在它不会在团建的时候说出来。",
+          options: [
+            ["我的坏心情一般留到半夜处理。", "很合理。半夜的自己专门接白天留下的烂摊子。", "creator", 1],
+            ["我会说给信任的人听。", "那个人应该挺重要的。也挺忙的。", "guardian", 2],
+            ["我通常睡一觉，醒来假装没发生。", "有效。但有些东西第二天会自动恢复草稿。", "builder", 1]
+          ]
+        },
+        bed: {
+          tail: "我每天都说今晚早睡。床每天都选择相信我。",
+          options: [
+            ["它人真好。", "对。这个家里最单纯的就是它。", "guardian", 1],
+            ["所以你昨天几点睡的？", "我们聊点别的。", "creator", 0],
+            ["今天就别骗它了。", "现在说还早。十一点以后再提醒我一次。", "builder", 2]
+          ]
+        },
+        sunflower: {
+          tail: "它一天到晚拧成这样，也没向谁解释过姿势为什么不好看。",
+          options: [
+            ["一直在动就行，姿势不重要。", "我也是这么安慰自己的。暂时有用。", "builder", 1],
+            ["我觉得它低头的时候更好看。", "对。终于不用努力证明自己朝着光了。", "creator", 2],
+            ["我可能会忍不住帮它扶正。", "别扶。它好不容易才拧出自己的方向。", "guardian", 1]
+          ]
+        },
+        redFlowers: {
+          tail: "它们什么都不给我，但我每天还是得确认一下它们活着。",
+          options: [
+            ["让人惦记，也算一种用途。", "……这个答案比我的好。", "guardian", 2],
+            ["四株是不是有点难数？", "你别笑。我真的数过很多遍。", "creator", 1],
+            ["今天浇水了吗？", "浇了。应该浇了。等一下，我去看看。", "builder", 1]
+          ]
+        },
+        carrot: {
+          tail: "如果你没看见它，我们本来可以相处得很好。",
+          options: [
+            ["我什么都没看见。", "很好。你很懂这个房间的规矩。", "guardian", 1],
+            ["我可以帮你把它藏得再远一点。", "谢谢。最好藏到另一个游戏里。", "creator", 2],
+            ["吃一口，剩下的我替你解决。", "你先吃。我要确认这不是骗局。", "builder", 1]
+          ]
+        },
+        computer: {
+          tail: "桌面看着挺干净。文件夹里面还有文件夹，最里面那个叫“最终版3真的最终版”。",
+          options: [
+            ["很专业，我的一般叫“新建文件夹（8）”。", "看来我们用的是同一套管理系统。", "builder", 1],
+            ["我想先看你最不想让我看的那个。", "你的权限突然没有了。", "creator", 0],
+            ["先把游戏打开，工作文件晚点再说。", "这个需求优先级很合理。通过。", "guardian", 2]
+          ]
+        },
+        scroll: {
+          tail: "写下来是怕忘，藏在这里是不太想让人看见。两件事并不冲突。",
+          options: [
+            ["喜欢的东西，我也会反复回去看。", "那你应该明白。有时候不是怀旧，是还没舍得出来。", "creator", 2],
+            ["我更喜欢一直往前，不太回头。", "也挺好。回头这种事，我一个人做得已经够多了。", "builder", 1],
+            ["我会回头，但只看最重要的几个。", "那几个应该被你好好保存了吧。希望是。", "guardian", 2]
+          ]
+        },
+        storageBox: {
+          tail: "这里装的都是“以后也许用得上”。以后本人暂时还没来认领。",
+          options: [
+            ["先留着，扔完马上要用才最烦。", "对。物品会感知你什么时候把它扔掉。", "guardian", 1],
+            ["一年没用过就应该清理。", "你说得对。这个箱子决定暂时不接受采访。", "builder", 1],
+            ["我想看看最下面压着什么。", "你的探索欲迟早会给你惹麻烦。请继续。", "creator", 2]
+          ]
+        },
+        blueToy: {
+          tail: "……你还是找到了。我以前觉得抱着它睡觉很幼稚，所以藏了起来。后来又偷偷翻出来。两件事都挺幼稚的。",
+          options: [
+            ["那就别再藏了。", "好。那就放近一点。", "builder", 3],
+            ["我可以当作没看见，但它应该留下。", "谢谢。你这个“没看见”演得不太好。", "guardian", 3],
+            ["小时候喜欢的东西，不需要毕业。", "……这句话，我可能会记很久。", "creator", 4]
+          ]
+        }
+      };
+      const COMBO_CONFIG = {
+        pianoScroll: {
+          title: "第四页之后",
+          achievement: "第四页之后",
+          text: "《第四页之后》\n\n琴盖合上以后，那页没写完的谱子还留在卷轴旁边。\n\n瑞秋：有些东西不是放弃了，只是停在第四页。你居然还记得前面那架琴。"
+        },
+        flowersCarrot: {
+          title: "没用的东西",
+          achievement: "没用的东西",
+          text: "《没用的东西》\n\n四株红花在风里晃，角落里的胡萝卜继续假装自己不存在。\n\n瑞秋：没用的东西和不喜欢的东西都活得挺好。这个院子的管理方式可能比我成熟。"
+        },
+        fullDay: {
+          title: "完整的一天",
+          achievement: "完整的一天",
+          text: "《完整的一天》\n\n咖啡负责开机，电脑负责消耗，床负责把今天结算掉。\n\n瑞秋：顺序完全正确。很遗憾，这就是一整天。"
+        }
+      };
+      const ENDING_COPY = {
+        creator: "你以后大概还是会喜欢上一些没法立刻证明有用的东西。可能写不完，练不完，也不一定有人看见。别急着解释。能让你反复回去的东西，本身就是答案。",
+        builder: "你应该还会做很多东西，把乱七八糟的问题整理成别人能用的样子。你很擅长往前推，只是偶尔也记得关机。世界不会因为你休息一晚就停止运行。",
+        guardian: "你会记得给花浇水，也会接住很多朝你跑过来的人。你大概很习惯照顾别的东西。以后列名单的时候，偶尔也把自己写进去。",
+        wanderer: "你好像还没决定以后要成为哪一种人。挺巧，我也没有。先往前走吧，走错了再回来。地图又没有规定只能打开一次。"
+      };
       const SCROLL_PAGES = [
         `我不吃猪肉。别人问我为什么，我一概说'我是回族'——这个答案最短，也最好用。
 
@@ -2484,13 +3025,21 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
 
 这两件事之间应该是有关系的。我不打算深究。`
         },
-        shippingBox: {
+        garbage: {
           title: "负责收留坏心情的垃圾箱",
           body: `每天都在用。外卖盒、草稿纸、写了又删的方案。
 
 我有个习惯：倒垃圾的时候顺手把心情也清一遍——今天的烦、没说出口的话、不太体面的情绪，一起系紧袋口拎下楼。
 
 垃圾桶离单元门有点远。那几步路，刚好够我想清楚一件事。`
+        },
+        storageBox: {
+          title: "暂时不接受采访的收纳箱",
+          body: `里面装着数据线、旧包装、用过两次的工具，还有一些我已经忘了用途但不敢扔的零件。
+
+每次整理房间，我都会把它们拿出来，认真判断一遍，然后原样放回去。
+
+这不叫拖延。这叫一年一次的库存复核。`
         },
         blueToy: {
           title: "不在清单上的东西",
@@ -2503,12 +3052,12 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
 把它放在这里，意思是我承认这件事——但还没完全敢把它摆到明面上。`
         },
         computer: {
-          title: "电脑",
-          body: "这里将展示电脑对应的经历与作品。内容准备好后可直接替换。"
+          title: "瑞秋的电脑",
+          body: "屏幕暗下去之前，桌面上那几个文件夹还保持着一种很可疑的整齐。"
         },
         scroll: {
           title: "床头柜上的卷轴",
-          body: "这里将展示卷轴记录的内容。内容准备好后可直接替换。"
+          body: "最后一页停在那里。纸上没再往下写，但显然也没有真正结束。"
         },
         coffee: {
           title: "一杯续命咖啡",
@@ -2531,6 +3080,96 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
 不过躺进去就等于结算了。不管今天糟成什么样，睡一觉，明天还是照常开始。`
         }
       };
+
+      function saveProgress() {
+        localStorage.setItem("sdv_answers", JSON.stringify(answers));
+        localStorage.setItem("sdv_order", JSON.stringify(interactionOrder.slice(-240)));
+        localStorage.setItem("sdv_combos", JSON.stringify([...completedCombos]));
+        localStorage.setItem("sdv_profile", JSON.stringify(profileScores));
+        localStorage.setItem("sdv_affection", String(affection));
+        localStorage.setItem("sdv_rachel_talks", String(rachelTalkCount));
+        localStorage.setItem("xingzhaogu-achievements", JSON.stringify([...unlockedAchievements]));
+      }
+
+      function hasOrderedSequence(sequence) {
+        let cursor = 0;
+        for (const eventKey of interactionOrder) {
+          if (eventKey === sequence[cursor]) cursor += 1;
+          if (cursor === sequence.length) return true;
+        }
+        return false;
+      }
+
+      const pendingComboDialogues = [];
+
+      function completeCombo(key) {
+        if (completedCombos.has(key)) return;
+        const combo = COMBO_CONFIG[key];
+        completedCombos.add(key);
+        pendingComboDialogues.push(combo.text);
+        unlockAchievement(`combo-${key}`, `隐藏成就：${combo.achievement}`);
+        saveProgress();
+        updateComboHints();
+      }
+
+      function detectCombos() {
+        if (hasOrderedSequence(["piano", "scroll"])) completeCombo("pianoScroll");
+        if (
+          interactionOrder.includes("redFlowers") &&
+          interactionOrder.includes("carrot")
+        ) {
+          completeCombo("flowersCarrot");
+        }
+        if (hasOrderedSequence(["coffee", "computer", "bed"])) completeCombo("fullDay");
+      }
+
+      function recordInteraction(type) {
+        if (!ANSWER_CONFIG[type]) return;
+        interactionOrder.push(type);
+        if (interactionOrder.length > 240) interactionOrder.splice(0, interactionOrder.length - 240);
+        detectCombos();
+        saveProgress();
+      }
+
+      function comboHintKeys() {
+        const keys = new Set();
+        if (!completedCombos.has("pianoScroll")) {
+          keys.add(interactionOrder.includes("piano") ? "scroll" : "piano");
+        }
+        if (!completedCombos.has("flowersCarrot")) {
+          if (interactionOrder.includes("redFlowers")) keys.add("carrot");
+          else if (interactionOrder.includes("carrot")) keys.add("redFlowers");
+        }
+        if (!completedCombos.has("fullDay")) {
+          if (hasOrderedSequence(["coffee", "computer"])) keys.add("bed");
+          else if (interactionOrder.includes("coffee")) keys.add("computer");
+        }
+        return keys;
+      }
+
+      function updateComboHints() {
+        const hints = comboHintKeys();
+        scene.querySelectorAll(".scene-object.interactive").forEach(element => {
+          element.classList.toggle("combo-hint", hints.has(element.dataset.interaction));
+        });
+      }
+
+      function selectedProfile() {
+        const entries = Object.entries(profileScores);
+        const sorted = [...entries].sort((a, b) => b[1] - a[1]);
+        if (!sorted[0][1] || sorted[0][1] - sorted[1][1] <= 1) return "wanderer";
+        return sorted[0][0];
+      }
+
+      function affectionEnding() {
+        if (affection <= 8) return "差不多就是这些。谢谢你来过。";
+        if (affection >= 22) return "我本来只想让你参观一下。现在有点希望，你以后也在这个未来里。";
+        return "以后路过的话，还可以再进来坐坐。";
+      }
+
+      function canEnterNight() {
+        return allCatalogAchievementsUnlocked();
+      }
 
       function fitScene() {
         const padding = window.innerWidth <= 560 ? 16 : 32;
@@ -2578,6 +3217,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
         element.style.opacity = String(item.opacity ?? 1);
         element.style.transform = objectTransform(item);
         element.dataset.objectId = String(item.id);
+        if (item.nightClass) element.classList.add(item.nightClass);
 
         const image = document.createElement("img");
         image.className = "object-img";
@@ -2593,6 +3233,15 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
           element.dataset.interaction = interaction.key;
           element.dataset.interactionDistance = String(interaction.distance ?? INTERACTION_DISTANCE);
           element.addEventListener("click", () => attemptInteraction(element, activateInteraction));
+        }
+
+        if (nightState && interaction?.key === "blueToy") {
+          element.hidden = true;
+        }
+
+        if (nightState && interaction?.key === "cat") {
+          element.style.left = "552px";
+          element.style.top = "242px";
         }
 
         if (interaction?.key === "piano") {
@@ -2640,7 +3289,9 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
         `;
         element.addEventListener("click", event => {
           event.stopPropagation();
-          showRachelDialogue();
+          rachelTalkCount += 1;
+          saveProgress();
+          showRachelDialogue(undefined, [], checkNightInvitation);
         });
         playerX = spawn.x;
         playerY = spawn.y;
@@ -2660,7 +3311,22 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             data = await response.json();
           }
-          const objects = [...data.objects].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+          const objects = [...data.objects, ...(EXTRA_SCENE_OBJECTS[sceneKey] || [])];
+          if (nightState && sceneKey === "bedroom") {
+            objects.push({
+              id: 9001,
+              name: "Wallflower Pal",
+              x: 590,
+              y: 158,
+              width: 26,
+              height: 26,
+              z: 899,
+              opacity: 1,
+              nightClass: "night-bed-toy",
+              src: "stardew-assets/1714-Wallflower-Pal-ca61e1ff64.png"
+            });
+          }
+          objects.sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
           currentScene = sceneKey;
           fitScene();
           game.setAttribute("aria-label", config.label);
@@ -2670,7 +3336,11 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
             ...objects.map(item => makeSceneObject(item, sceneKey)),
             makePlayer(sceneKey, fromScene)
           );
+          if (nightState && sceneKey === "bedroom") {
+            scene.append(makeDecoration("scene-night-window"));
+          }
           updateInteractionProximity();
+          updateComboHints();
           scene.classList.add("has-data");
           loadError.classList.remove("is-visible");
           transitionReadyAt = performance.now() + 500;
@@ -2680,6 +3350,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
             void scene.offsetWidth;
             scene.classList.add("is-switching");
           }
+          window.setTimeout(checkNightInvitation, animate ? 420 : 0);
         } catch (error) {
           console.error(`Unable to load ${sceneKey} scene data:`, error);
           scene.style.backgroundImage = `url("${config.fallback}")`;
@@ -2709,6 +3380,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
       function switchScene(sceneKey) {
         if (sceneBusy || sceneKey === currentScene) return;
         const fromScene = currentScene;
+        if (sceneKey === "living") nightInviteShown = false;
         sceneBusy = true;
         lastFocusedObject = null;
         clearMovementInput();
@@ -2742,6 +3414,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
         if (!element.classList.contains("is-near") || sceneBusy) return;
         clearMovementInput();
         player?.classList.remove("is-walking");
+        recordInteraction(element.dataset.interaction);
         action(element);
         const achievement = INTERACTION_ACHIEVEMENTS[element.dataset.interaction];
         if (achievement) {
@@ -2890,6 +3563,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
       }
 
       function playDo() {
+        if (soundMuted) return;
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) return;
 
@@ -2929,7 +3603,8 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
         achievementShowing = true;
         achievementText.textContent = achievementQueue.shift();
         const isFinalCatalogAchievement =
-          !completionDialogueShown &&
+          !nightState &&
+          !nightInviteShown &&
           achievementQueue.length === 0 &&
           allCatalogAchievementsUnlocked();
         const toastDuration = isFinalCatalogAchievement ? 5200 : 3500;
@@ -2943,7 +3618,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
             if (achievementQueue.length) {
               showNextAchievement();
             } else {
-              showCompletionDialogueIfReady();
+              checkNightInvitation();
             }
           }, followupDelay);
         }, toastDuration);
@@ -2952,26 +3627,9 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
       function unlockAchievement(key, text) {
         if (unlockedAchievements.has(key)) return;
         unlockedAchievements.add(key);
+        saveProgress();
         achievementQueue.push(text);
         showNextAchievement();
-      }
-
-      function showCompletionDialogueIfReady() {
-        if (!allCatalogAchievementsUnlocked() || completionDialogueShown) return;
-
-        completionDialogueShown = true;
-        manualBackdrop.classList.remove("is-open");
-        computerBackdrop.classList.remove("is-open");
-        scrollBackdrop.classList.remove("is-open");
-        achievementBoardBackdrop.classList.remove("is-open");
-        clearMovementInput();
-        player?.classList.remove("is-walking");
-        dialogueName.textContent = "刘易斯";
-        dialoguePortraitImage.src = "editor/stardew-assets/0551-Solid-Gold-Lewis-23e39d7882.png";
-        dialoguePortraitImage.alt = "刘易斯雕像";
-        dialogueText.textContent = COMPLETION_DIALOGUE;
-        characterDialogue.classList.add("is-open");
-        dialogueClose.focus({ preventScroll: true });
       }
 
       function renderAchievementBoard() {
@@ -3094,7 +3752,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
         }, 900);
       }
 
-      function showRachelDialogue(message) {
+      function showRachelDialogue(message, options = [], afterClose = null) {
         let nextMessage = message;
         if (!nextMessage) {
           let nextIndex = Math.floor(Math.random() * RACHEL_DIALOGUES.length);
@@ -3111,13 +3769,115 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
         dialoguePortraitImage.src = "editor/stardew-assets/2473-Haley-38213afe09.png";
         dialoguePortraitImage.alt = "瑞秋";
         dialogueText.textContent = nextMessage;
+        dialogueOptions.replaceChildren();
+        options.forEach(option => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "dialogue-option";
+          button.textContent = option.label;
+          button.addEventListener("click", option.action);
+          dialogueOptions.append(button);
+        });
+        dialogueAfterClose = afterClose;
         characterDialogue.classList.add("is-open");
-        dialogueClose.focus({ preventScroll: true });
+        dialogueClose.hidden = options.length > 0;
+        (dialogueOptions.querySelector("button") || dialogueClose).focus({ preventScroll: true });
       }
 
-      function closeRachelDialogue() {
+      function closeRachelDialogue(runCallback = true) {
+        if (dialogueOptions.childElementCount) return;
         characterDialogue.classList.remove("is-open");
+        dialogueClose.hidden = false;
+        const callback = dialogueAfterClose;
+        dialogueAfterClose = null;
         scene.focus({ preventScroll: true });
+        if (runCallback) window.setTimeout(() => callback?.(), 180);
+      }
+
+      function showDialogueSequence(messages, onComplete = null) {
+        const queue = messages.filter(Boolean);
+        const showNext = () => {
+          const message = queue.shift();
+          if (!message) {
+            onComplete?.();
+            return;
+          }
+          showRachelDialogue(message, [], showNext);
+        };
+        showNext();
+      }
+
+      function clearDialogueForChoice() {
+        dialogueOptions.replaceChildren();
+        dialogueClose.hidden = false;
+        characterDialogue.classList.remove("is-open");
+        dialogueAfterClose = null;
+      }
+
+      function checkNightInvitation() {
+        if (
+          nightState ||
+          nightInviteShown ||
+          !canEnterNight() ||
+          !playerCanMove()
+        ) return;
+
+        nightInviteShown = true;
+        showRachelDialogue(
+          "天快黑了。你要是没别的事……也可以再待一会儿。\n\n我没有在留你，只是现在把你赶出去显得我很没礼貌。",
+          [
+            { label: "那我就待到天黑。", action: beginNight },
+            {
+              label: "我再转一会儿。",
+              action: () => {
+                clearDialogueForChoice();
+                scene.focus({ preventScroll: true });
+              }
+            }
+          ]
+        );
+      }
+
+      function beginNight() {
+        clearDialogueForChoice();
+        nightState = true;
+        localStorage.setItem("sdv_night", "true");
+        document.body.classList.add("is-night", "is-entering-night");
+        backgroundMusic.volume = .1;
+        const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 50 : 4000;
+        window.setTimeout(() => {
+          document.body.classList.remove("is-entering-night");
+          loadScene(currentScene, true, currentScene);
+          showNightQuestion();
+        }, duration);
+      }
+
+      function showNightQuestion() {
+        if (endingChoice) return;
+        showRachelDialogue(
+          "你还真待到天黑了。一般人看完电脑里的东西就走了，很少有人连胡萝卜藏在哪儿都要知道。\n\n所以，看了一圈，你觉得你看到了什么？",
+          [
+            { label: "看到你做成的那些事。", action: () => finishEnding(0) },
+            { label: "看到你没做完的那些事。", action: () => finishEnding(1) },
+            { label: "看到你藏起来、又没舍得扔的东西。", action: () => finishEnding(2) }
+          ]
+        );
+      }
+
+      function finishEnding(choiceIndex) {
+        const replies = [
+          "那些最好介绍。写进简历，排好顺序，看起来很像一切都在计划里。",
+          "那些比较像我。完成的东西会被归档，没完成的反而一直跟着。",
+          "……看来确实没藏好。也可能是我本来就希望有人找到。"
+        ];
+        endingChoice = String(choiceIndex + 1);
+        localStorage.setItem("sdv_ending_choice", endingChoice);
+        clearDialogueForChoice();
+        const profile = selectedProfile();
+        showDialogueSequence([
+          replies[choiceIndex],
+          `${ENDING_COPY[profile]}\n\n${affectionEnding()}`
+        ]);
       }
 
       function renderScrollPage(animate = false) {
@@ -3151,7 +3911,7 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
 
       function closeScroll() {
         scrollBackdrop.classList.remove("is-open");
-        lastFocusedObject?.focus({ preventScroll: true });
+        window.setTimeout(() => openManual("scroll"), 160);
       }
 
       function renderAIProjects() {
@@ -3296,20 +4056,83 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
       function closeComputer() {
         computerBackdrop.classList.remove("is-open");
         showComputerHome();
-        lastFocusedObject?.focus({ preventScroll: true });
+        window.setTimeout(() => openManual("computer"), 160);
       }
 
       function openManual(type) {
         const manual = manuals[type];
+        const answer = ANSWER_CONFIG[type];
+        activeManualType = type;
         manualTitle.textContent = manual.title;
         manualBody.textContent = manual.body;
+        answerFloat.hidden = true;
+        answerToggle.hidden = !answer;
+        manualTail.textContent = answer?.tail || "";
+        manualTail.hidden = !answer;
+        answerOptions.replaceChildren();
+        answerHistory.hidden = true;
+
+        if (answer && Object.hasOwn(answers, type)) {
+          const selected = answer.options[answers[type]];
+          answerToggle.textContent = "查看上次回应";
+          answerHistory.textContent = `你说：“${selected[0]}”\n瑞秋：“${selected[1]}”`;
+          answerHistory.hidden = false;
+          answerOptions.hidden = true;
+        } else if (answer) {
+          answerToggle.textContent = "回应瑞秋";
+          answer.options.forEach((option, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "answer-option";
+            button.textContent = option[0];
+            button.addEventListener("click", () => chooseAnswer(type, index));
+            answerOptions.append(button);
+          });
+          answerOptions.hidden = false;
+        } else {
+          answerOptions.hidden = true;
+        }
         manualBackdrop.classList.add("is-open");
-        manualClose.focus();
+        manualClose.focus({ preventScroll: true });
+        manualContent.scrollTop = 0;
+      }
+
+      function openAnswerFloat() {
+        if (answerToggle.hidden) return;
+        answerFloat.hidden = false;
+        (answerOptions.querySelector("button") || answerFloatClose).focus({ preventScroll: true });
+      }
+
+      function closeAnswerFloat() {
+        answerFloat.hidden = true;
+        answerToggle.focus({ preventScroll: true });
+      }
+
+      function chooseAnswer(type, index) {
+        if (Object.hasOwn(answers, type)) return;
+        const option = ANSWER_CONFIG[type]?.options[index];
+        if (!option) return;
+        answers[type] = index;
+        profileScores[option[2]] += 1;
+        affection += option[3];
+        saveProgress();
+        manualBackdrop.classList.remove("is-open");
+        activeManualType = null;
+        const comboMessages = pendingComboDialogues.splice(0);
+        showDialogueSequence([option[1], ...comboMessages], checkNightInvitation);
       }
 
       function closeManual() {
         manualBackdrop.classList.remove("is-open");
+        answerFloat.hidden = true;
+        activeManualType = null;
         lastFocusedObject?.focus();
+        if (pendingComboDialogues.length) {
+          const comboMessages = pendingComboDialogues.splice(0);
+          window.setTimeout(() => showDialogueSequence(comboMessages, checkNightInvitation), 180);
+        } else {
+          window.setTimeout(checkNightInvitation, 180);
+        }
       }
 
       function playerCanMove() {
@@ -3367,14 +4190,31 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
 
       function useMobileAction() {
         if (characterDialogue.classList.contains("is-open")) {
-          closeRachelDialogue();
+          if (!dialogueOptions.childElementCount) closeRachelDialogue();
           return;
         }
         if (playerCanMove()) interactWithNearestObject();
       }
 
+      function toggleSound(event) {
+        event.stopPropagation();
+        soundMuted = !soundMuted;
+        backgroundMusic.muted = soundMuted;
+        titleSound.classList.toggle("is-muted", soundMuted);
+        titleSound.setAttribute("aria-pressed", String(soundMuted));
+        titleSound.setAttribute("aria-label", soundMuted ? "开启声音" : "静音");
+        titleSound.title = soundMuted ? "开启声音" : "静音";
+        if (soundMuted) {
+          audioContext?.suspend();
+        } else {
+          audioContext?.resume();
+          backgroundMusic.play().catch(() => {});
+        }
+      }
+
+      titleSound.addEventListener("click", toggleSound);
       titleScreen.addEventListener("click", () => {
-        backgroundMusic.volume = .25;
+        backgroundMusic.volume = nightState ? .1 : .25;
         backgroundMusic.play().catch(() => {});
 
         if (!titleAssembled) {
@@ -3391,10 +4231,12 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
 
         if (!titleReady) return;
         titleScreen.classList.add("is-hidden");
+        titleSound.classList.add("is-hidden");
         game.classList.add("is-ready");
         window.setTimeout(() => {
           titleScreen.remove();
-          showRachelDialogue(INTRO_DIALOGUE);
+          titleSound.remove();
+          showRachelDialogue(INTRO_DIALOGUE, [], checkNightInvitation);
         }, 460);
       });
 
@@ -3419,6 +4261,8 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
         if (event.target === achievementBoardBackdrop) closeAchievementBoard();
       });
       manualClose.addEventListener("click", closeManual);
+      answerToggle.addEventListener("click", openAnswerFloat);
+      answerFloatClose.addEventListener("click", closeAnswerFloat);
       manualBackdrop.addEventListener("click", event => {
         if (event.target === manualBackdrop) closeManual();
       });
@@ -3469,12 +4313,40 @@ MOBA 最让我上瘾的不是赢，是那种五个人必须合作、但每个人
         }
 
         if (event.key === "Escape" && manualBackdrop.classList.contains("is-open")) {
-          closeManual();
+          if (!answerFloat.hidden) closeAnswerFloat();
+          else closeManual();
           return;
         }
 
         const key = event.key.toLowerCase();
+        if (dialogueIsOpen && ["1", "2", "3"].includes(key)) {
+          const option = dialogueOptions.children[Number(key) - 1];
+          if (option) {
+            event.preventDefault();
+            option.click();
+          }
+          return;
+        }
+
+        if (
+          manualBackdrop.classList.contains("is-open") &&
+          !answerFloat.hidden &&
+          ["1", "2", "3"].includes(key)
+        ) {
+          const option = answerOptions.children[Number(key) - 1];
+          if (option) {
+            event.preventDefault();
+            option.click();
+          }
+          return;
+        }
+
         if ((event.code === "Space" || key === " ") && dialogueIsOpen) {
+          if (document.activeElement === dialogueClose) {
+            event.preventDefault();
+            if (!event.repeat) dialogueClose.click();
+            return;
+          }
           event.preventDefault();
           if (!event.repeat) closeRachelDialogue();
           return;
